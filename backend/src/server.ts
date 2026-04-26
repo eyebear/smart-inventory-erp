@@ -7,6 +7,7 @@ import inventoryRoute from "./routes/inventory";
 import expiringProductsRoute from "./routes/expiringProducts";
 import analyticsRoute from "./routes/analytics";
 import legacySuppliersRoute from "./routes/legacySuppliers";
+import authRoute from "./routes/auth";
 
 dotenv.config();
 
@@ -50,6 +51,8 @@ app.use("/api/expiring-products", expiringProductsRoute);
 app.use("/api/analytics", analyticsRoute);
 
 app.use("/api/legacy-suppliers", legacySuppliersRoute);
+
+app.use("/api/auth", authRoute);
 
 const port = process.env.PORT || 5001;
 
