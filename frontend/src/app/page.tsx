@@ -1,59 +1,26 @@
-type Product = {
-  id: number;
-  sku: string;
-  name_en: string;
-  name_zh: string;
-  category: string;
-  origin_country: string;
-  supplier_name: string;
-};
-
-async function getProducts(): Promise<Product[]> {
-  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-
-  const response = await fetch(`${apiBaseUrl}/api/products`, {
-    cache: "no-store"
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch products");
-  }
-
-  return response.json();
-}
-
-export default async function Home() {
-  const products = await getProducts();
-
+export default function DashboardPage() {
   return (
-    <main style={{ padding: "32px", fontFamily: "Arial, sans-serif" }}>
-      <h1>Smart Inventory ERP</h1>
-      <p>Product data loaded from Node.js backend and MySQL.</p>
+    <div>
+      <h1 className="page-title">Dashboard</h1>
 
-      <table border={1} cellPadding={8} cellSpacing={0}>
-        <thead>
-          <tr>
-            <th>SKU</th>
-            <th>English Name</th>
-            <th>Chinese Name</th>
-            <th>Category</th>
-            <th>Origin</th>
-            <th>Supplier</th>
-          </tr>
-        </thead>
-        <tbody>
-          {products.map((product) => (
-            <tr key={product.id}>
-              <td>{product.sku}</td>
-              <td>{product.name_en}</td>
-              <td>{product.name_zh}</td>
-              <td>{product.category}</td>
-              <td>{product.origin_country}</td>
-              <td>{product.supplier_name}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </main>
+      <div className="card">
+        <h2>Smart Inventory ERP</h2>
+        <p>
+          This dashboard supports multi-store inventory tracking, expiry
+          monitoring, supplier integration, and waste analytics.
+        </p>
+      </div>
+
+      <div className="card">
+        <h2>System Modules</h2>
+        <ul>
+          <li>Product master data</li>
+          <li>Batch-level inventory tracking</li>
+          <li>Expiring product alerts</li>
+          <li>Waste cost analytics</li>
+          <li>Legacy PHP supplier integration</li>
+        </ul>
+      </div>
+    </div>
   );
 }
