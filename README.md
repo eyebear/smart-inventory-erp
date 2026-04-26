@@ -126,13 +126,15 @@ PHP service runs at:
 http://localhost:8000/suppliers.php
 
 ### Key API Endpoints
-Endpoint	Purpose
-GET /api/products	Get product master data
-GET /api/inventory	Get inventory batches
-GET /api/expiring-products	Get products expiring soon
-GET /api/analytics/waste-summary	Get waste analytics
-POST /api/auth/login	User login
-GET /api/legacy-suppliers	Node.js calls PHP supplier service
+
+| Endpoint | Purpose |
+|---|---|
+| GET /api/products | Get product master data |
+| GET /api/inventory | Get inventory batches |
+| GET /api/expiring-products | Get products expiring soon |
+| GET /api/analytics/waste-summary | Get waste analytics |
+| POST /api/auth/login | User login |
+| GET /api/legacy-suppliers | Node.js calls PHP supplier service |
 
 ## CI/CD
 ### GitHub Actions checks:
