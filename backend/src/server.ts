@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { db } from "./config/database";
+import productsRoute from "./routes/products";
 
 dotenv.config();
 
@@ -35,6 +36,8 @@ app.get("/api/db-test", async (req, res) => {
     });
   }
 });
+
+app.use("/api/products", productsRoute);
 
 const port = process.env.PORT || 5001;
 
