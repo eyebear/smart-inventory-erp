@@ -4,6 +4,8 @@ A full-stack ERP-style inventory management system for multi-store retail operat
 
 This project simulates an internal business application for a supermarket or grocery retail company. It focuses on inventory tracking, expiry monitoring, waste reduction, supplier integration, authentication, and role-based access control.
 
+---
+
 ## Business Problem
 
 Retail grocery companies manage many expiry-sensitive products across multiple store locations. Poor inventory visibility can lead to:
@@ -14,41 +16,39 @@ Retail grocery companies manage many expiry-sensitive products across multiple s
 - Food waste
 - Inventory mismatch between systems
 
-This system helps store managers and administrators monitor inventory, detect expiring products, analyze waste, and integrate modern applications with legacy systems.
+This system helps monitor inventory, detect expiring products, analyze waste, and integrate modern applications with legacy systems.
+
+---
 
 ## Tech Stack
 
 ### Frontend
-
 - React
 - TypeScript
 - Next.js
 
 ### Backend
-
 - Node.js
 - Express.js
 - TypeScript
 
 ### Database
-
 - MySQL
 
 ### Legacy System Simulation
-
 - PHP
 
 ### Security
-
 - JWT authentication
 - bcrypt password hashing
 - Role-based access control
 
 ### DevOps
-
 - Git
 - GitHub
 - GitHub Actions CI
+
+---
 
 ## Main Features
 
@@ -61,7 +61,120 @@ This system helps store managers and administrators monitor inventory, detect ex
 - Login system
 - JWT authentication
 - Admin and Store Manager roles
-- Bilingual UI labels: English / Chinese
+- Bilingual UI (English / Chinese)
+
+---
+
+## Screenshots
+
+### Dashboard
+![Dashboard](docs/screenshots/dashboard.png)
+
+### Products
+![Products](docs/screenshots/products.png)
+
+### Inventory
+![Inventory](docs/screenshots/inventory.png)
+
+### Expiring Products
+![Expiring Products](docs/screenshots/expiring-products.png)
+
+### Waste Analytics
+![Waste Analytics](docs/screenshots/waste-analytics.png)
+
+### Login
+![Login](docs/screenshots/login.png)
+
+---
+
+## Demo Accounts
+
+| Username | Password | Role |
+|---|---|---|
+| admin | abc123456 | ADMIN |
+| richmond_manager | abc123456 | STORE_MANAGER |
+| burnaby_manager | abc123456 | STORE_MANAGER |
+
+---
+## Quick Demo Guide
+
+Follow these steps to test the system locally:
+
+### 1. Start all services
+
+Backend:
+
+    cd backend
+    npm run dev
+
+Frontend:
+
+    cd frontend
+    npm run dev
+
+PHP legacy service:
+
+    cd legacy-php
+    php -S localhost:8000
+
+---
+
+### 2. Open the application
+
+    http://localhost:3000
+
+---
+
+### 3. Login
+
+Use:
+
+| Username | Password |
+|---|---|
+| admin | abc123456 |
+| richmond_manager | abc123456 |
+
+---
+
+### 4. Test features
+
+After login:
+
+- View Products page
+- View Inventory page
+- Check Expiring Products
+- View Waste Analytics
+
+---
+
+### 5. Test role-based access
+
+Admin:
+
+- Full access
+- Can access admin-only endpoints
+
+Store Manager:
+
+- Limited permissions
+- Cannot access admin-only routes
+
+Example test:
+
+Use Postman:
+
+    GET http://localhost:5001/api/admin-test
+
+- admin → success
+- store_manager → forbidden
+
+---
+
+### 6. Test legacy integration
+
+    http://localhost:5001/api/legacy-suppliers
+
+This confirms Node.js successfully calls the PHP service.
 
 ## System Components
 
@@ -73,59 +186,9 @@ This system helps store managers and administrators monitor inventory, detect ex
 | legacy-php | Simulated legacy supplier service |
 | docs | Documentation and system design |
 
-## Demo Accounts
+---
 
-| Username | Password | Role |
-|---|---|---|
-| admin | abc123456 | ADMIN |
-| richmond_manager | abc123456 | STORE_MANAGER |
-| burnaby_manager | abc123456 | STORE_MANAGER |
-
-## Local Development
-
-### 1. Start MySQL
-
-```bash
-brew services start mysql
-```
-Load schema and seed data:
-```bash
-mysql -u root -p < database/schema.sql
-mysql -u root -p < database/seed.sql
-```
-
-### 2. Start backend
-```bash
-cd backend
-npm install
-npm run dev
-```
-Backend runs at:
-
-http://localhost:5001
-
-### 3. Start frontend
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Frontend runs at:
-
-http://localhost:3000
-
-### 4. Start PHP legacy service
-```bash
-cd legacy-php
-php -S localhost:8000
-```
-
-PHP service runs at:
-
-http://localhost:8000/suppliers.php
-
-### Key API Endpoints
+## Key API Endpoints
 
 | Endpoint | Purpose |
 |---|---|
@@ -136,15 +199,97 @@ http://localhost:8000/suppliers.php
 | POST /api/auth/login | User login |
 | GET /api/legacy-suppliers | Node.js calls PHP supplier service |
 
+---
+
+## Local Development
+
+### 1. Start MySQL
+
+    brew services start mysql
+
+Load schema and seed data:
+
+    mysql -u root -p < database/schema.sql
+    mysql -u root -p < database/seed.sql
+
+---
+
+### 2. Start backend
+
+    cd backend
+    npm install
+    npm run dev
+
+Backend runs at:
+
+    http://localhost:5001
+
+---
+
+### 3. Start frontend
+
+    cd frontend
+    npm install
+    npm run dev
+
+Frontend runs at:
+
+    http://localhost:3000
+
+---
+
+### 4. Start PHP legacy service
+
+    cd legacy-php
+    php -S localhost:8000
+
+PHP service runs at:
+
+    http://localhost:8000/suppliers.php
+
+---
+
 ## CI/CD
-### GitHub Actions checks:
 
-Backend build
-Frontend build
-Frontend lint
-PHP syntax
-Required documentation files
+GitHub Actions automatically checks:
 
-## Project Purpose
+- Backend build
+- Frontend build
+- Frontend lint
+- PHP syntax
+- Documentation files
 
-This project demonstrates full-stack enterprise application development for retail operations, including modern web development, relational database design, API development, authentication, role-based access control, and legacy system integration.
+---
+
+## Project Highlights (For Recruiters)
+
+- Full-stack ERP-style system
+- Real-world business modeling (inventory, expiry, waste)
+- JWT authentication and RBAC security
+- Integration with legacy PHP system
+- Clean separation of frontend, backend, and services
+- Production-style project structure
+
+---
+
+## Documentation
+
+See:
+
+- docs/API_SPEC.md
+- docs/ARCHITECTURE.md
+- docs/WORKFLOW.md
+- docs/SRS.md
+
+---
+
+## Summary
+
+This project demonstrates:
+
+- Full-stack development
+- API design
+- Database modeling
+- Authentication and authorization
+- Real-world enterprise architecture
+- Legacy system integration
