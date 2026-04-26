@@ -8,6 +8,8 @@ import expiringProductsRoute from "./routes/expiringProducts";
 import analyticsRoute from "./routes/analytics";
 import legacySuppliersRoute from "./routes/legacySuppliers";
 import authRoute from "./routes/auth";
+import { authenticateToken } from "./middleware/authMiddleware";
+import { requireRole } from "./middleware/roleMiddleware";
 
 dotenv.config();
 
@@ -41,6 +43,23 @@ app.get("/api/db-test", async (req, res) => {
     });
   }
 });
+
+app.get("/api/protected-test", authenticateToken, (req, res) => {
+  res.json({
+    message: "Protected route accessed successfully"
+  });
+});
+
+app.get(
+  "/api/admin-test",
+  authenticateToken,
+  requireRole("ADMIN"),
+  (req, res) => {
+    res.json({
+      message: "Admin-only route accessed successfully"
+    });
+  }
+);
 
 app.use("/api/products", productsRoute);
 

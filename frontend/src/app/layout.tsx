@@ -21,6 +21,10 @@ export default function RootLayout({
             <h2>Smart Inventory ERP</h2>
             <LanguageToggle />
             <nav>
+              <Link href="/login">
+                <span className="lang-en">Login</span>
+                <span className="lang-zh">登录</span>
+              </Link>
               <Link href="/">
                 <span className="lang-en">Dashboard</span>
                 <span className="lang-zh">仪表盘</span>
