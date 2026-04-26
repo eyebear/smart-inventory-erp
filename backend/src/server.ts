@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import { db } from "./config/database";
 import productsRoute from "./routes/products";
 import inventoryRoute from "./routes/inventory";
+import expiringProductsRoute from "./routes/expiringProducts";
 
 dotenv.config();
 
@@ -41,6 +42,8 @@ app.get("/api/db-test", async (req, res) => {
 app.use("/api/products", productsRoute);
 
 app.use("/api/inventory", inventoryRoute);
+
+app.use("/api/expiring-products", expiringProductsRoute);
 
 const port = process.env.PORT || 5001;
 
