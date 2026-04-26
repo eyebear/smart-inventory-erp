@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import { db } from "./config/database";
 
 dotenv.config();
 
@@ -14,6 +15,25 @@ app.get("/api/health", (req, res) => {
     status: "ok",
     service: "Smart Inventory ERP Backend"
   });
+});
+
+app.get("/api/db-test", async (req, res) => {
+  try {
+    const [rows] = await db.query("SELECT 1 AS result");
+
+    res.json({
+      status: "ok",
+      database: "connected",
+      result: rows
+    });
+   } catch (error) {
+    console.error("Database connection failed:", error);
+
+    res.status(500).json({
+      status: "error",
+      message: "Database connection failed"
+    });
+  }
 });
 
 const port = process.env.PORT || 5001;
