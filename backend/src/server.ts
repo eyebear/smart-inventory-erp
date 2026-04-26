@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { db } from "./config/database";
 import productsRoute from "./routes/products";
+import inventoryRoute from "./routes/inventory";
 
 dotenv.config();
 
@@ -38,6 +39,8 @@ app.get("/api/db-test", async (req, res) => {
 });
 
 app.use("/api/products", productsRoute);
+
+app.use("/api/inventory", inventoryRoute);
 
 const port = process.env.PORT || 5001;
 
