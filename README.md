@@ -77,10 +77,10 @@ This system helps monitor inventory, detect expiring products, analyze waste, an
 ![Inventory](docs/screenshots/inventory.png)
 
 ### Expiring Products
-![Expiring Products](docs/screenshots/expiring-products.png)
+![Expiring Products](docs/screenshots/expiringproducts.png)
 
 ### Waste Analytics
-![Waste Analytics](docs/screenshots/waste-analytics.png)
+![Waste Analytics](docs/screenshots/wasteanalytics.png)
 
 ### Login
 ![Login](docs/screenshots/login.png)
