@@ -43,6 +43,32 @@ jobs:
       - name: Check PHP syntax
         run: find . -name "*.php" -print0 | xargs -0 -n1 php -l
 
+  frontend:
+    name: Frontend CI
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install frontend dependencies
+        run: npm install
+
+      - name: Run frontend lint
+        run: npm run lint
+
+      - name: Build frontend
+        run: npm run build
+
   backend:
     name: Backend CI
     runs-on: ubuntu-latest
