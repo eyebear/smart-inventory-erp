@@ -23,25 +23,31 @@ jobs:
           test -f README.md
           test -f docs/SRS.md
 
-  php:
-    name: PHP Syntax Check
+  backend:
+    name: Backend CI
     runs-on: ubuntu-latest
 
     defaults:
       run:
-        working-directory: legacy-php
+        working-directory: backend
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          php-version: "8.3"
+          node-version: 24
 
-      - name: Check PHP syntax
-        run: find . -name "*.php" -print0 | xargs -0 -n1 php -l
+      - name: Install backend dependencies
+        run: npm install
+
+      - name: Run backend tests
+        run: npm test
+
+      - name: Build backend
+        run: npm run build
 
   frontend:
     name: Frontend CI
@@ -69,28 +75,22 @@ jobs:
       - name: Build frontend
         run: npm run build
 
-  backend:
-    name: Backend CI
+  php:
+    name: PHP Syntax Check
     runs-on: ubuntu-latest
 
     defaults:
       run:
-        working-directory: backend
+        working-directory: legacy-php
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
         with:
-          node-version: 24
+          php-version: "8.3"
 
-      - name: Install backend dependencies
-        run: npm install
-
-      - name: Run backend tests
-        run: npm test
-
-      - name: Build backend
-        run: npm run build
+      - name: Check PHP syntax
+        run: find . -name "*.php" -print0 | xargs -0 -n1 php -l
