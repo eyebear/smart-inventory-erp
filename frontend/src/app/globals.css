@@ -79,3 +79,28 @@ td {
 th {
   background: #f9fafb;
 }
+
+.language-toggle {
+  width: 100%;
+  margin-bottom: 28px;
+  padding: 10px 12px;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  background: transparent;
+  color: #d1d5db;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.language-toggle:hover {
+  background: #374151;
+  color: white;
+}
+
+html[data-lang="en"] .lang-zh {
+  display: none;
+}
+
+html[data-lang="zh"] .lang-en {
+  display: none;
+}

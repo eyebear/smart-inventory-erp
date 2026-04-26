@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
+import LanguageToggle from "@/components/LanguageToggle";
 
 export const metadata: Metadata = {
   title: "Smart Inventory ERP",
@@ -18,13 +19,32 @@ export default function RootLayout({
         <div className="app-shell">
           <aside className="sidebar">
             <h2>Smart Inventory ERP</h2>
-
+            <LanguageToggle />
             <nav>
-              <Link href="/">Dashboard</Link>
-              <Link href="/products">Products</Link>
-              <Link href="/inventory">Inventory</Link>
-              <Link href="/expiring-products">Expiring Products</Link>
-              <Link href="/waste-analytics">Waste Analytics</Link>
+              <Link href="/">
+                <span className="lang-en">Dashboard</span>
+                <span className="lang-zh">仪表盘</span>
+              </Link>
+
+              <Link href="/products">
+                <span className="lang-en">Products</span>
+                <span className="lang-zh">商品管理</span>
+              </Link>
+
+              <Link href="/inventory">
+                <span className="lang-en">Inventory</span>
+                <span className="lang-zh">库存管理</span>
+              </Link>
+
+              <Link href="/expiring-products">
+                <span className="lang-en">Expiring Products</span>
+                <span className="lang-zh">临期商品</span>
+              </Link>
+
+              <Link href="/waste-analytics">
+                <span className="lang-en">Waste Analytics</span>
+                <span className="lang-zh">损耗分析</span>
+              </Link>
             </nav>
           </aside>
 
