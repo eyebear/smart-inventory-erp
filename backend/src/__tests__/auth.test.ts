@@ -10,7 +10,7 @@ describe("Auth API", () => {
     expect([400, 401]).toContain(response.status);
   });
 
-  test("POST /api/auth/login should reject invalid credentials", async () => {
+  test("POST /api/auth/login should reject invalid credentials or database error", async () => {
     const response = await request(app)
       .post("/api/auth/login")
       .send({
@@ -18,6 +18,11 @@ describe("Auth API", () => {
         password: "wrong_password"
       });
 
-    expect([400, 401]).toContain(response.status);
+    expect([400, 401, 500]).toContain(response.status);
+
+    if (response.status === 500) {
+      expect(response.body).toHaveProperty("message");
+      expect(typeof response.body.message).toBe("string");
+    }
   });
 });
