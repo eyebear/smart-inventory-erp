@@ -10,8 +10,7 @@ export const getProducts = async (req: Request, res: Response) => {
         p.name_en,
         p.name_zh,
         p.category,
-        p.unit,
-        p.shelf_life_days,
+        p.origin_country,
         s.name AS supplier_name
       FROM products p
       LEFT JOIN suppliers s ON p.supplier_id = s.id
