@@ -99,7 +99,9 @@ This system helps monitor inventory, detect expiring products, analyze waste, an
 ## Quick Demo Guide
 
 Follow these steps to test the system locally:
-
+### 0. Database
+Username: root
+Password: abc123456
 ### 1. Start all services
 
 Backend:
