@@ -3,6 +3,7 @@ services:
     image: mysql:8.4
     container_name: smart-inventory-mysql
     restart: unless-stopped
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     environment:
       MYSQL_ROOT_PASSWORD: abc123456
       MYSQL_DATABASE: smart_inventory_erp
@@ -52,6 +53,9 @@ services:
   frontend:
     build:
       context: ./frontend
+      args:
+        NEXT_PUBLIC_API_BASE_URL: http://localhost:5001
+        SERVER_API_BASE_URL: http://backend:5001
     container_name: smart-inventory-frontend
     restart: unless-stopped
     environment:
@@ -59,6 +63,7 @@ services:
       PORT: 3000
       HOSTNAME: 0.0.0.0
       NEXT_PUBLIC_API_BASE_URL: http://localhost:5001
+      SERVER_API_BASE_URL: http://backend:5001
     ports:
       - "3000:3000"
     depends_on:

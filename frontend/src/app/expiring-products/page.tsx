@@ -15,7 +15,8 @@ type ExpiringProduct = {
 };
 
 async function getExpiringProducts(): Promise<ExpiringProduct[]> {
-  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+const apiBaseUrl =
+  process.env.SERVER_API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL;
 
   const response = await fetch(`${apiBaseUrl}/api/expiring-products?days=10`, {
     cache: "no-store"

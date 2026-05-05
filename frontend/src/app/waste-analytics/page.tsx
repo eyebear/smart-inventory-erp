@@ -6,7 +6,8 @@ type WasteSummary = {
 };
 
 async function getWasteSummary(): Promise<WasteSummary[]> {
-  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+  const apiBaseUrl =
+    process.env.SERVER_API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL;
 
   const response = await fetch(`${apiBaseUrl}/api/analytics/waste-summary`, {
     cache: "no-store"

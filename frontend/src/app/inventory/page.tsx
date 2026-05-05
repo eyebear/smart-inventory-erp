@@ -15,7 +15,8 @@ type InventoryBatch = {
 };
 
 async function getInventory(): Promise<InventoryBatch[]> {
-  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+const apiBaseUrl =
+  process.env.SERVER_API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL;
 
   const response = await fetch(`${apiBaseUrl}/api/inventory`, {
     cache: "no-store"
