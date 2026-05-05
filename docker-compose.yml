@@ -1,0 +1,68 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: smart-inventory-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: abc123456
+      MYSQL_DATABASE: smart_inventory_erp
+    ports:
+      - "3307:3306"
+    volumes:
+      - smart_inventory_mysql_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-pabc123456"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  legacy-php:
+    build:
+      context: ./legacy-php
+    container_name: smart-inventory-legacy-php
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+
+  backend:
+    build:
+      context: ./backend
+    container_name: smart-inventory-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 5001
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: abc123456
+      DB_NAME: smart_inventory_erp
+      JWT_SECRET: smart_inventory_demo_secret_change_later
+      PHP_SERVICE_URL: http://legacy-php:8000
+    ports:
+      - "5001:5001"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      legacy-php:
+        condition: service_started
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: smart-inventory-frontend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:5001
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  smart_inventory_mysql_data:
