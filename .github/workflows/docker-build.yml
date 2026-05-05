@@ -1,0 +1,41 @@
+name: Docker Build Checks
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  docker-build:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Validate Docker Compose file
+        run: docker compose config
+
+      - name: Build backend Docker image
+        run: docker build -t smart-inventory-backend-ci ./backend
+
+      - name: Build frontend Docker image
+        run: |
+          docker build \
+            --build-arg NEXT_PUBLIC_API_BASE_URL=http://localhost:5001 \
+            --build-arg SERVER_API_BASE_URL=http://backend:5001 \
+            -t smart-inventory-frontend-ci \
+            ./frontend
+
+      - name: Build legacy PHP Docker image
+        run: docker build -t smart-inventory-legacy-php-ci ./legacy-php
+
+      - name: Build all services with Docker Compose
+        run: docker compose build
