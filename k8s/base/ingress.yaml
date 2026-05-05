@@ -1,0 +1,29 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: smart-inventory-ingress
+  namespace: smart-inventory
+  labels:
+    app.kubernetes.io/name: smart-inventory-ingress
+    app.kubernetes.io/part-of: smart-inventory-erp
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: smart-inventory.local
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 5001
+
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 3000

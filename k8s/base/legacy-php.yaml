@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: legacy-php
+  namespace: smart-inventory
+  labels:
+    app: legacy-php
+    app.kubernetes.io/name: smart-inventory-legacy-php
+    app.kubernetes.io/part-of: smart-inventory-erp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: legacy-php
+  template:
+    metadata:
+      labels:
+        app: legacy-php
+        app.kubernetes.io/name: smart-inventory-legacy-php
+        app.kubernetes.io/part-of: smart-inventory-erp
+    spec:
+      containers:
+        - name: legacy-php
+          image: smart-inventory-legacy-php:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          env:
+            - name: PHP_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: smart-inventory-config
+                  key: PHP_PORT
+
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: legacy-php
+  namespace: smart-inventory
+  labels:
+    app: legacy-php
+    app.kubernetes.io/name: smart-inventory-legacy-php
+    app.kubernetes.io/part-of: smart-inventory-erp
+spec:
+  type: ClusterIP
+  selector:
+    app: legacy-php
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
