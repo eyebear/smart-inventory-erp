@@ -162,15 +162,389 @@ Warning: `docker compose down -v` deletes only the Docker Compose MySQL volume. 
 
 ---
 
-### Option 2: Run with Local Kubernetes
+# Option 2 — Run with Local Kubernetes
 
-The project can also run in a local Kubernetes cluster through Docker Desktop Kubernetes.
+Use this option when you want to test the Kubernetes deployment.
 
-The local Kubernetes application URL is:
+This project includes Kubernetes manifests under:
+
+    k8s/base
+
+The local Kubernetes setup runs:
+
+| Component | Kubernetes Resource |
+|---|---|
+| Frontend | Deployment + Service |
+| Backend | Deployment + Service |
+| MySQL | Deployment + Service + PersistentVolumeClaim |
+| Legacy PHP service | Deployment + Service |
+| Configuration | ConfigMap |
+| Demo secrets | Secret |
+| External access | Ingress |
+
+The local Kubernetes app is accessed through:
 
     http://smart-inventory.local
 
-Backend test URLs through Kubernetes Ingress:
+---
+
+## 1. Make sure Docker Desktop Kubernetes is enabled
+
+Open Docker Desktop.
+
+Go to:
+
+    Settings → Kubernetes → Enable Kubernetes → Apply & Restart
+
+Wait until Docker Desktop finishes restarting.
+
+Then verify Kubernetes is running:
+
+    kubectl get nodes
+
+Good result should show a node with:
+
+    Ready
+
+Example:
+
+    desktop-control-plane   Ready   control-plane
+
+If you see a connection error such as:
+
+    The connection to the server localhost:8080 was refused
+
+then Kubernetes is not running yet, or `kubectl` is not connected to the correct local cluster.
+
+---
+
+## 2. Confirm the current Kubernetes context
+
+Run:
+
+    kubectl config current-context
+
+For Docker Desktop Kubernetes, the context is usually:
+
+    docker-desktop
+
+If needed, switch to Docker Desktop Kubernetes:
+
+    kubectl config use-context docker-desktop
+
+Then test again:
+
+    kubectl get nodes
+
+---
+
+## 3. Build local Docker images for Kubernetes
+
+Kubernetes needs container images before it can start the application pods.
+
+From the project root, build the backend image:
+
+    docker build -t smart-inventory-backend:latest ./backend
+
+Build the legacy PHP image:
+
+    docker build -t smart-inventory-legacy-php:latest ./legacy-php
+
+Build the frontend image:
+
+    docker build \
+      --build-arg NEXT_PUBLIC_API_BASE_URL=http://smart-inventory.local \
+      --build-arg SERVER_API_BASE_URL=http://backend:5001 \
+      -t smart-inventory-frontend:latest \
+      ./frontend
+
+The frontend build arguments are important.
+
+| Variable | Purpose |
+|---|---|
+| `NEXT_PUBLIC_API_BASE_URL` | Browser-side API URL used by client-side code such as login |
+| `SERVER_API_BASE_URL` | Internal Kubernetes backend URL used by server-rendered Next.js pages |
+
+For local Kubernetes, browser-side requests should go through:
+
+    http://smart-inventory.local
+
+Server-side frontend requests can use the internal Kubernetes backend service:
+
+    http://backend:5001
+
+---
+
+## 4. Install NGINX Ingress Controller
+
+The project uses Kubernetes Ingress so the browser can access the app through one local domain.
+
+Install the NGINX Ingress Controller:
+
+    kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.12.1/deploy/static/provider/cloud/deploy.yaml
+
+Check the ingress controller pods:
+
+    kubectl get pods -n ingress-nginx
+
+Wait until the controller pod shows:
+
+    Running
+
+Also check the ingress controller service:
+
+    kubectl get svc -n ingress-nginx
+
+---
+
+## 5. Configure the local domain
+
+The project uses this local domain:
+
+    smart-inventory.local
+
+Edit your hosts file:
+
+    sudo nano /etc/hosts
+
+Add this line:
+
+    127.0.0.1 smart-inventory.local
+
+Save and exit.
+
+Test the local domain:
+
+    ping smart-inventory.local
+
+Good result should show it resolving to:
+
+    127.0.0.1
+
+Stop the ping with:
+
+    Control + C
+
+If the browser does not work later, check the Ingress address:
+
+    kubectl get ingress -n smart-inventory
+
+If Kubernetes shows a specific address such as:
+
+    172.19.0.5
+
+then update `/etc/hosts` to:
+
+    172.19.0.5 smart-inventory.local
+
+---
+
+## 6. Apply the Kubernetes namespace
+
+Apply the namespace first:
+
+    kubectl apply -f k8s/base/namespace.yaml
+
+Verify:
+
+    kubectl get namespaces
+
+You should see:
+
+    smart-inventory
+
+---
+
+## 7. Apply configuration and secrets
+
+Apply the ConfigMap:
+
+    kubectl apply -f k8s/base/configmap.yaml
+
+Apply the Secret:
+
+    kubectl apply -f k8s/base/secret.yaml
+
+Apply the MySQL initialization ConfigMap:
+
+    kubectl apply -f k8s/base/mysql-init-configmap.yaml
+
+These files provide the environment variables, demo credentials, schema SQL, and seed SQL needed by the local Kubernetes deployment.
+
+---
+
+## 8. Start MySQL in Kubernetes
+
+Apply the MySQL manifest:
+
+    kubectl apply -f k8s/base/mysql.yaml
+
+Check the MySQL pod:
+
+    kubectl get pods -n smart-inventory
+
+Wait until MySQL becomes:
+
+    1/1 Running
+
+You can also check MySQL logs:
+
+    kubectl logs deployment/mysql -n smart-inventory
+
+The MySQL pod loads:
+
+    database/schema.sql
+    database/seed.sql
+
+through:
+
+    k8s/base/mysql-init-configmap.yaml
+
+Important: MySQL initialization only runs when the Kubernetes MySQL data volume is empty. If you need to reload schema and seed data, reset the namespace:
+
+    kubectl delete namespace smart-inventory
+
+Then reapply the manifests from the namespace step.
+
+---
+
+## 9. Start the legacy PHP service
+
+Apply the PHP manifest:
+
+    kubectl apply -f k8s/base/legacy-php.yaml
+
+Check:
+
+    kubectl get pods -n smart-inventory
+
+Good result:
+
+    legacy-php   1/1 Running
+
+---
+
+## 10. Start the backend
+
+Apply the backend manifest:
+
+    kubectl apply -f k8s/base/backend.yaml
+
+Check:
+
+    kubectl get pods -n smart-inventory
+
+Good result:
+
+    backend   1/1 Running
+
+Check backend logs if needed:
+
+    kubectl logs deployment/backend -n smart-inventory
+
+The backend connects to:
+
+| Dependency | Kubernetes URL |
+|---|---|
+| MySQL | `mysql:3306` |
+| Legacy PHP | `http://legacy-php:8000` |
+
+---
+
+## 11. Start the frontend
+
+Apply the frontend manifest:
+
+    kubectl apply -f k8s/base/frontend.yaml
+
+Check:
+
+    kubectl get pods -n smart-inventory
+
+Good result:
+
+    frontend   1/1 Running
+
+Check frontend logs if needed:
+
+    kubectl logs deployment/frontend -n smart-inventory
+
+---
+
+## 12. Apply the Ingress
+
+Apply the Ingress manifest:
+
+    kubectl apply -f k8s/base/ingress.yaml
+
+Check:
+
+    kubectl get ingress -n smart-inventory
+
+Expected host:
+
+    smart-inventory.local
+
+The Ingress routes:
+
+| Path | Service |
+|---|---|
+| `/` | frontend |
+| `/api` | backend |
+
+Important: the Ingress should not rewrite `/api` paths. The backend routes already include the `/api` prefix.
+
+For example:
+
+| Browser URL | Backend should receive |
+|---|---|
+| `/api/health` | `/api/health` |
+| `/api/db-test` | `/api/db-test` |
+| `/api/products` | `/api/products` |
+
+---
+
+## 13. Verify all Kubernetes resources
+
+Check pods:
+
+    kubectl get pods -n smart-inventory
+
+Good result:
+
+    mysql        1/1 Running
+    backend      1/1 Running
+    frontend     1/1 Running
+    legacy-php   1/1 Running
+
+Check services:
+
+    kubectl get svc -n smart-inventory
+
+Expected services:
+
+    mysql
+    backend
+    frontend
+    legacy-php
+
+Check Ingress:
+
+    kubectl get ingress -n smart-inventory
+
+Expected host:
+
+    smart-inventory.local
+
+---
+
+## 14. Test the application
+
+Open the frontend:
+
+    http://smart-inventory.local
+
+Test backend through Ingress:
 
     http://smart-inventory.local/api/health
 
@@ -178,7 +552,198 @@ Backend test URLs through Kubernetes Ingress:
 
     http://smart-inventory.local/api/products
 
+    http://smart-inventory.local/api/inventory
+
+    http://smart-inventory.local/api/expiring-products
+
+    http://smart-inventory.local/api/analytics/waste-summary
+
+    http://smart-inventory.local/api/legacy-suppliers
+
+Login with:
+
+| Username | Password | Role |
+|---|---|---|
+| `admin` | `abc123456` | ADMIN |
+| `richmond_manager` | `abc123456` | STORE_MANAGER |
+| `burnaby_manager` | `abc123456` | STORE_MANAGER |
+
+After login, verify:
+
+- Products page
+- Inventory page
+- Expiring Products page
+- Waste Analytics page
+- Legacy supplier integration
+- Chinese product names display correctly
+
 ---
+
+## 15. Useful Kubernetes debugging commands
+
+Check pods:
+
+    kubectl get pods -n smart-inventory
+
+Check services:
+
+    kubectl get svc -n smart-inventory
+
+Check ingress:
+
+    kubectl get ingress -n smart-inventory
+
+Check backend logs:
+
+    kubectl logs deployment/backend -n smart-inventory
+
+Check frontend logs:
+
+    kubectl logs deployment/frontend -n smart-inventory
+
+Check MySQL logs:
+
+    kubectl logs deployment/mysql -n smart-inventory
+
+Check legacy PHP logs:
+
+    kubectl logs deployment/legacy-php -n smart-inventory
+
+Describe a pod:
+
+    kubectl describe pod <pod-name> -n smart-inventory
+
+Restart backend:
+
+    kubectl rollout restart deployment/backend -n smart-inventory
+
+Restart frontend:
+
+    kubectl rollout restart deployment/frontend -n smart-inventory
+
+Restart legacy PHP:
+
+    kubectl rollout restart deployment/legacy-php -n smart-inventory
+
+---
+
+## 16. Common Kubernetes issues
+
+### Issue: ImagePullBackOff
+
+Check pods:
+
+    kubectl get pods -n smart-inventory
+
+If a pod shows:
+
+    ImagePullBackOff
+
+then Kubernetes cannot find the local image.
+
+Rebuild the images:
+
+    docker build -t smart-inventory-backend:latest ./backend
+    docker build -t smart-inventory-legacy-php:latest ./legacy-php
+    docker build \
+      --build-arg NEXT_PUBLIC_API_BASE_URL=http://smart-inventory.local \
+      --build-arg SERVER_API_BASE_URL=http://backend:5001 \
+      -t smart-inventory-frontend:latest \
+      ./frontend
+
+Then restart the affected deployment:
+
+    kubectl rollout restart deployment/backend -n smart-inventory
+    kubectl rollout restart deployment/frontend -n smart-inventory
+    kubectl rollout restart deployment/legacy-php -n smart-inventory
+
+### Issue: Cannot GET /health or Cannot GET /db-test
+
+This usually means the Ingress is rewriting `/api/health` into `/health`.
+
+The Ingress should preserve `/api`.
+
+Correct behavior:
+
+    /api/health -> /api/health
+    /api/db-test -> /api/db-test
+
+Check:
+
+    k8s/base/ingress.yaml
+
+The Ingress should route `/api` to the backend without removing `/api`.
+
+### Issue: Login cannot reach backend
+
+For local Kubernetes, the frontend image must be built with:
+
+    NEXT_PUBLIC_API_BASE_URL=http://smart-inventory.local
+
+Rebuild the frontend image:
+
+    docker build \
+      --build-arg NEXT_PUBLIC_API_BASE_URL=http://smart-inventory.local \
+      --build-arg SERVER_API_BASE_URL=http://backend:5001 \
+      -t smart-inventory-frontend:latest \
+      ./frontend
+
+Restart frontend:
+
+    kubectl rollout restart deployment/frontend -n smart-inventory
+
+### Issue: Chinese text is corrupted
+
+Reset the Kubernetes MySQL database and reapply the manifests:
+
+    kubectl delete namespace smart-inventory
+
+Then reapply from the namespace step.
+
+The project uses `utf8mb4` in:
+
+- `database/schema.sql`
+- `database/seed.sql`
+- `backend/src/config/database.ts`
+- `k8s/base/mysql.yaml`
+
+### Issue: smart-inventory.local does not open
+
+Check Ingress:
+
+    kubectl get ingress -n smart-inventory
+
+Check hosts file:
+
+    cat /etc/hosts
+
+Make sure it contains either:
+
+    127.0.0.1 smart-inventory.local
+
+or the address shown by the Ingress:
+
+    <ingress-address> smart-inventory.local
+
+---
+
+## 17. Stop the local Kubernetes app
+
+To remove the project from Kubernetes:
+
+    kubectl delete namespace smart-inventory
+
+This removes:
+
+- frontend pod
+- backend pod
+- MySQL pod
+- legacy PHP pod
+- services
+- ingress
+- local Kubernetes MySQL data for this namespace
+
+It does not delete your source code.
 
 ### Option 3: Run Services Manually
 
