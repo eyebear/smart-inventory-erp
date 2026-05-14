@@ -1,3 +1,10 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import { useAuth } from "@/components/AuthProvider";
+import { authFetch } from "@/lib/api";
+
 type WasteSummary = {
   store_name: string;
   category: string;
@@ -5,23 +12,61 @@ type WasteSummary = {
   total_estimated_loss: string;
 };
 
-async function getWasteSummary(): Promise<WasteSummary[]> {
-  const apiBaseUrl =
-    process.env.SERVER_API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL;
-
-  const response = await fetch(`${apiBaseUrl}/api/analytics/waste-summary`, {
-    cache: "no-store"
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch waste summary");
-  }
-
-  return response.json();
+export default function WasteAnalyticsPage() {
+  return (
+    <ProtectedRoute>
+      <WasteAnalyticsContent />
+    </ProtectedRoute>
+  );
 }
 
-export default async function WasteAnalyticsPage() {
-  const wasteSummary = await getWasteSummary();
+function WasteAnalyticsContent() {
+  const { token, logout } = useAuth();
+  const [wasteSummary, setWasteSummary] = useState<WasteSummary[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      try {
+        const response = await authFetch("/api/analytics/waste-summary", {
+          token
+        });
+
+        if (response.status === 401) {
+          logout();
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch waste summary");
+        }
+
+        const data = (await response.json()) as WasteSummary[];
+        if (!cancelled) {
+          setWasteSummary(data);
+          setError(null);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Unknown error");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, logout]);
 
   return (
     <div>
@@ -35,9 +80,12 @@ export default async function WasteAnalyticsPage() {
       </div>
 
       <div className="card">
-        {wasteSummary.length === 0 ? (
+        {loading && <p>Loading…</p>}
+        {error && <p>{error}</p>}
+        {!loading && !error && wasteSummary.length === 0 && (
           <p>No waste records are available.</p>
-        ) : (
+        )}
+        {!loading && !error && wasteSummary.length > 0 && (
           <table>
             <thead>
               <tr>

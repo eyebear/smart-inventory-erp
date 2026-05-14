@@ -1,28 +1,102 @@
 import request from "supertest";
+
+jest.mock("../services/authService", () => ({
+  __esModule: true,
+  validateUser: jest.fn(),
+  findActiveUserById: jest.fn()
+}));
+
+jest.mock("../config/database", () => ({
+  __esModule: true,
+  db: {
+    query: jest.fn(),
+    getConnection: jest.fn()
+  }
+}));
+
 import app from "../app";
+import { db } from "../config/database";
+import { findActiveUserById } from "../services/authService";
+import { signTestToken } from "./testHelpers";
+
+const findActiveUserByIdMock = findActiveUserById as jest.MockedFunction<
+  typeof findActiveUserById
+>;
+const dbQueryMock = db.query as jest.Mock;
 
 describe("Products API", () => {
-  test("GET /api/products should return products or database error", async () => {
+  beforeEach(() => {
+    dbQueryMock.mockReset();
+  });
+
+  function controllerQueryCalls() {
+    return dbQueryMock.mock.calls.filter(
+      (call) => !String(call[0]).includes("auth_audit_log")
+    );
+  }
+
+  test("GET /api/products should reject unauthenticated requests", async () => {
     const response = await request(app).get("/api/products");
 
-    // Accept both success (local) and DB failure (CI)
-    expect([200, 500]).toContain(response.status);
+    expect(response.status).toBe(401);
+    expect(response.body).toHaveProperty("message");
+    expect(controllerQueryCalls()).toHaveLength(0);
+  });
 
-    if (response.status === 200) {
-      expect(Array.isArray(response.body)).toBe(true);
+  test("GET /api/products should reject invalid tokens", async () => {
+    const response = await request(app)
+      .get("/api/products")
+      .set("Authorization", "Bearer not-a-real-token");
 
-      if (response.body.length > 0) {
-        expect(response.body[0]).toHaveProperty("id");
-        expect(response.body[0]).toHaveProperty("sku");
-        expect(response.body[0]).toHaveProperty("name_en");
-        expect(response.body[0]).toHaveProperty("name_zh");
-        expect(response.body[0]).toHaveProperty("category");
+    expect(response.status).toBe(401);
+    expect(controllerQueryCalls()).toHaveLength(0);
+  });
+
+  test("GET /api/products returns 200 with rows for ADMIN", async () => {
+    findActiveUserByIdMock.mockResolvedValueOnce({
+      id: 1,
+      username: "admin",
+      role: "ADMIN",
+      store_id: null
+    });
+
+    const fakeRows = [
+      {
+        id: 1,
+        sku: "TOFU-001",
+        name_en: "Soft Tofu",
+        name_zh: "嫩豆腐",
+        category: "Fresh Food",
+        origin_country: "Canada",
+        supplier_name: "Pacific Fresh Foods"
       }
-    }
+    ];
+    dbQueryMock.mockResolvedValueOnce([fakeRows, []]);
 
-    if (response.status === 500) {
-      expect(response.body).toHaveProperty("message");
-      expect(typeof response.body.message).toBe("string");
-    }
+    const token = signTestToken({ userId: 1, username: "admin" });
+    const response = await request(app)
+      .get("/api/products")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(fakeRows);
+  });
+
+  test("GET /api/products surfaces 500 if DB query fails", async () => {
+    findActiveUserByIdMock.mockResolvedValueOnce({
+      id: 1,
+      username: "admin",
+      role: "ADMIN",
+      store_id: null
+    });
+    dbQueryMock.mockRejectedValueOnce(new Error("boom"));
+
+    const token = signTestToken({ userId: 1, username: "admin" });
+    const response = await request(app)
+      .get("/api/products")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(500);
+    expect(response.body.message).toMatch(/failed to fetch products/i);
   });
 });

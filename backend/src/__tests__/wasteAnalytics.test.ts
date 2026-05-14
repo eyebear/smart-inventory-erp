@@ -1,26 +1,63 @@
 import request from "supertest";
+
+jest.mock("../services/authService", () => ({
+  __esModule: true,
+  validateUser: jest.fn(),
+  findActiveUserById: jest.fn()
+}));
+
+jest.mock("../config/database", () => ({
+  __esModule: true,
+  db: {
+    query: jest.fn(),
+    getConnection: jest.fn()
+  }
+}));
+
 import app from "../app";
+import { db } from "../config/database";
+import { findActiveUserById } from "../services/authService";
+import { signTestToken } from "./testHelpers";
+
+const findActiveUserByIdMock = findActiveUserById as jest.MockedFunction<
+  typeof findActiveUserById
+>;
+const dbQueryMock = db.query as jest.Mock;
 
 describe("Waste Analytics API", () => {
-  test("GET /api/analytics/waste-summary should return waste summary or database error", async () => {
+  beforeEach(() => {
+    dbQueryMock.mockReset();
+  });
+
+  test("GET /api/analytics/waste-summary should reject unauthenticated requests", async () => {
     const response = await request(app).get("/api/analytics/waste-summary");
+    expect(response.status).toBe(401);
+  });
 
-    expect([200, 500]).toContain(response.status);
+  test("GET /api/analytics/waste-summary returns 200 rows for ADMIN", async () => {
+    findActiveUserByIdMock.mockResolvedValueOnce({
+      id: 1,
+      username: "admin",
+      role: "ADMIN",
+      store_id: null
+    });
 
-    if (response.status === 200) {
-      expect(Array.isArray(response.body)).toBe(true);
-
-      if (response.body.length > 0) {
-        expect(response.body[0]).toHaveProperty("store_name");
-        expect(response.body[0]).toHaveProperty("category");
-        expect(response.body[0]).toHaveProperty("total_quantity_wasted");
-        expect(response.body[0]).toHaveProperty("total_estimated_loss");
+    const rows = [
+      {
+        store_name: "Richmond Store",
+        category: "Seafood",
+        total_quantity_wasted: "3",
+        total_estimated_loss: "36.00"
       }
-    }
+    ];
+    dbQueryMock.mockResolvedValueOnce([rows, []]);
 
-    if (response.status === 500) {
-      expect(response.body).toHaveProperty("message");
-      expect(typeof response.body.message).toBe("string");
-    }
+    const token = signTestToken({ userId: 1, username: "admin" });
+    const response = await request(app)
+      .get("/api/analytics/waste-summary")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(rows);
   });
 });

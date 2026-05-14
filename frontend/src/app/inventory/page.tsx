@@ -1,3 +1,11 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import { useAuth } from "@/components/AuthProvider";
+import AddInventoryForm from "@/components/AddInventoryForm";
+import { authFetch } from "@/lib/api";
+
 type InventoryBatch = {
   batch_id: number;
   batch_code: string;
@@ -14,64 +22,98 @@ type InventoryBatch = {
   city: string;
 };
 
-async function getInventory(): Promise<InventoryBatch[]> {
-const apiBaseUrl =
-  process.env.SERVER_API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL;
-
-  const response = await fetch(`${apiBaseUrl}/api/inventory`, {
-    cache: "no-store"
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch inventory");
-  }
-
-  return response.json();
-}
-
-function formatDate(value: string) {
+function formatDate(value: string | null) {
+  if (!value) return "";
   return new Date(value).toLocaleDateString("en-CA");
 }
 
-export default async function InventoryPage() {
-  const inventory = await getInventory();
+export default function InventoryPage() {
+  return (
+    <ProtectedRoute>
+      <InventoryContent />
+    </ProtectedRoute>
+  );
+}
+
+function InventoryContent() {
+  const { token, logout } = useAuth();
+  const [inventory, setInventory] = useState<InventoryBatch[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await authFetch("/api/inventory", { token });
+
+      if (response.status === 401) {
+        logout();
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch inventory");
+      }
+
+      const data = (await response.json()) as InventoryBatch[];
+      setInventory(data);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unknown error");
+    } finally {
+      setLoading(false);
+    }
+  }, [token, logout]);
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      void load();
+    });
+  }, [load, refreshKey]);
 
   return (
     <div>
       <h1 className="page-title">Inventory</h1>
 
-      <div className="card">
-        <table>
-          <thead>
-            <tr>
-              <th>Store</th>
-              <th>SKU</th>
-              <th>Product</th>
-              <th>Chinese Name</th>
-              <th>Category</th>
-              <th>Batch Code</th>
-              <th>Quantity</th>
-              <th>Received Date</th>
-              <th>Expiry Date</th>
-            </tr>
-          </thead>
+      <AddInventoryForm onCreated={() => setRefreshKey((k) => k + 1)} />
 
-          <tbody>
-            {inventory.map((item) => (
-              <tr key={item.batch_id}>
-                <td>{item.store_name}</td>
-                <td>{item.sku}</td>
-                <td>{item.name_en}</td>
-                <td>{item.name_zh}</td>
-                <td>{item.category}</td>
-                <td>{item.batch_code}</td>
-                <td>{item.quantity}</td>
-                <td>{formatDate(item.received_date)}</td>
-                <td>{formatDate(item.expiry_date)}</td>
+      <div className="card">
+        {loading && <p>Loading…</p>}
+        {error && <p>{error}</p>}
+        {!loading && !error && (
+          <table>
+            <thead>
+              <tr>
+                <th>Store</th>
+                <th>SKU</th>
+                <th>Product</th>
+                <th>Chinese Name</th>
+                <th>Category</th>
+                <th>Batch Code</th>
+                <th>Quantity</th>
+                <th>Received Date</th>
+                <th>Expiry Date</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+
+            <tbody>
+              {inventory.map((item) => (
+                <tr key={item.batch_id}>
+                  <td>{item.store_name}</td>
+                  <td>{item.sku}</td>
+                  <td>{item.name_en}</td>
+                  <td>{item.name_zh}</td>
+                  <td>{item.category}</td>
+                  <td>{item.batch_code}</td>
+                  <td>{item.quantity}</td>
+                  <td>{formatDate(item.received_date)}</td>
+                  <td>{formatDate(item.expiry_date)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );

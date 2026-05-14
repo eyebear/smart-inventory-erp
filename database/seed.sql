@@ -40,8 +40,8 @@ VALUES
   (2, 3, 'Expired before sale', '2026-04-29', 36.00),
   (1, 5, 'Damaged packaging', '2026-04-26', 12.50);
 
-INSERT INTO users (username, password_hash, role, store_id)
+INSERT INTO users (username, password_hash, role, store_id, is_active)
 VALUES
-  ('admin', '$2b$10$pSIA9IeGWGWCr6EKYRQZsOsMj.WEYSfX9mEpEnYm0cNJFIDDlly2u', 'ADMIN', NULL),
-  ('richmond_manager', '$2b$10$pSIA9IeGWGWCr6EKYRQZsOsMj.WEYSfX9mEpEnYm0cNJFIDDlly2u', 'STORE_MANAGER', 1),
-  ('burnaby_manager', '$2b$10$pSIA9IeGWGWCr6EKYRQZsOsMj.WEYSfX9mEpEnYm0cNJFIDDlly2u', 'STORE_MANAGER', 2);
+  ('admin', '$2b$10$pSIA9IeGWGWCr6EKYRQZsOsMj.WEYSfX9mEpEnYm0cNJFIDDlly2u', 'ADMIN', NULL, 1),
+  ('richmond_manager', '$2b$10$pSIA9IeGWGWCr6EKYRQZsOsMj.WEYSfX9mEpEnYm0cNJFIDDlly2u', 'STORE_MANAGER', 1, 1),
+  ('burnaby_manager', '$2b$10$pSIA9IeGWGWCr6EKYRQZsOsMj.WEYSfX9mEpEnYm0cNJFIDDlly2u', 'STORE_MANAGER', 2, 1);

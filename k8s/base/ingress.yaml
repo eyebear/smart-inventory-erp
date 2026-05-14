@@ -6,6 +6,20 @@ metadata:
   labels:
     app.kubernetes.io/name: smart-inventory-ingress
     app.kubernetes.io/part-of: smart-inventory-erp
+  annotations:
+    # SECURITY: overwrite (not just append) proxy-trust headers so a client
+    # that directly hits the ingress cannot spoof TLS termination via
+    # X-Forwarded-Proto: https. The backend's TRUST_PROXY=1 then trusts only
+    # this single upstream hop.
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header X-Forwarded-Proto $scheme;
+      proxy_set_header X-Forwarded-Host  $host;
+      proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+      proxy_set_header X-Real-IP         $remote_addr;
+    nginx.ingress.kubernetes.io/server-snippet: |
+      # Block any client attempt to inject conflicting forwarded headers.
+      proxy_hide_header X-Forwarded-Proto;
+      proxy_hide_header X-Forwarded-Host;
 spec:
   ingressClassName: nginx
   rules:

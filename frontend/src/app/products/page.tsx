@@ -1,3 +1,10 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import { useAuth } from "@/components/AuthProvider";
+import { authFetch } from "@/lib/api";
+
 type Product = {
   id: number;
   sku: string;
@@ -8,54 +15,94 @@ type Product = {
   supplier_name: string;
 };
 
-async function getProducts(): Promise<Product[]> {
-  const apiBaseUrl =
-    process.env.SERVER_API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL;
-
-  const response = await fetch(`${apiBaseUrl}/api/products`, {
-    cache: "no-store"
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch products");
-  }
-
-  return response.json();
+export default function ProductsPage() {
+  return (
+    <ProtectedRoute>
+      <ProductsContent />
+    </ProtectedRoute>
+  );
 }
 
-export default async function ProductsPage() {
-  const products = await getProducts();
+function ProductsContent() {
+  const { token, logout } = useAuth();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      try {
+        const response = await authFetch("/api/products", { token });
+
+        if (response.status === 401) {
+          logout();
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch products");
+        }
+
+        const data = (await response.json()) as Product[];
+        if (!cancelled) {
+          setProducts(data);
+          setError(null);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Unknown error");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, logout]);
 
   return (
     <div>
       <h1 className="page-title">Products</h1>
 
       <div className="card">
-        <table>
-          <thead>
-            <tr>
-              <th>SKU</th>
-              <th>English Name</th>
-              <th>Chinese Name</th>
-              <th>Category</th>
-              <th>Origin</th>
-              <th>Supplier</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {products.map((product) => (
-              <tr key={product.id}>
-                <td>{product.sku}</td>
-                <td>{product.name_en}</td>
-                <td>{product.name_zh}</td>
-                <td>{product.category}</td>
-                <td>{product.origin_country}</td>
-                <td>{product.supplier_name}</td>
+        {loading && <p>Loading…</p>}
+        {error && <p>{error}</p>}
+        {!loading && !error && (
+          <table>
+            <thead>
+              <tr>
+                <th>SKU</th>
+                <th>English Name</th>
+                <th>Chinese Name</th>
+                <th>Category</th>
+                <th>Origin</th>
+                <th>Supplier</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+
+            <tbody>
+              {products.map((product) => (
+                <tr key={product.id}>
+                  <td>{product.sku}</td>
+                  <td>{product.name_en}</td>
+                  <td>{product.name_zh}</td>
+                  <td>{product.category}</td>
+                  <td>{product.origin_country}</td>
+                  <td>{product.supplier_name}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );

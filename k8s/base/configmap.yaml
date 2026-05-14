@@ -22,3 +22,8 @@ data:
 
   SERVER_API_BASE_URL: "http://backend:5001"
   NEXT_PUBLIC_API_BASE_URL: "http://localhost:5001"
+
+  # Express trust-proxy setting. Trust the cluster-internal hop (the
+  # ingress-nginx pod) only. The ingress overwrites X-Forwarded-Proto so any
+  # value spoofed by a direct client gets stripped by app.ts before routing.
+  TRUST_PROXY: "1"

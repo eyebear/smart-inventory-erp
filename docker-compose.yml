@@ -40,7 +40,14 @@ services:
       DB_USER: root
       DB_PASSWORD: abc123456
       DB_NAME: smart_inventory_erp
-      JWT_SECRET: smart_inventory_demo_secret_change_later
+      # Asymmetric RS256 JWT signing.
+      # Private key lives ONLY on this backend service — never on the frontend.
+      # In production, mount real keys from a secret manager and rotate regularly.
+      JWT_PRIVATE_KEY_PATH: /app/keys/dev/jwt_private.pem
+      JWT_PUBLIC_KEY_PATH: /app/keys/dev/jwt_public.pem
+      # Trust the docker network's local ingress / kube-proxy (loopback) only.
+      # The reverse proxy MUST overwrite X-Forwarded-Proto/X-Forwarded-For.
+      TRUST_PROXY: loopback
       PHP_SERVICE_URL: http://legacy-php:8000
     ports:
       - "5001:5001"
@@ -58,6 +65,8 @@ services:
         SERVER_API_BASE_URL: http://backend:5001
     container_name: smart-inventory-frontend
     restart: unless-stopped
+    # The frontend MUST NOT receive JWT signing keys — it only relays the
+    # opaque bearer token from the browser to the backend.
     environment:
       NODE_ENV: production
       PORT: 3000

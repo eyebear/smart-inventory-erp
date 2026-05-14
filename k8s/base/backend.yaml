@@ -68,17 +68,31 @@ spec:
                   name: smart-inventory-config
                   key: PHP_SERVICE_URL
 
+            - name: TRUST_PROXY
+              valueFrom:
+                configMapKeyRef:
+                  name: smart-inventory-config
+                  key: TRUST_PROXY
+
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: smart-inventory-secret
                   key: DB_PASSWORD
 
-            - name: JWT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: smart-inventory-secret
-                  key: JWT_SECRET
+            # Asymmetric RS256 JWT keys. The private key is mounted only on
+            # this backend deployment — the frontend deployment never receives
+            # it. See ingress.yaml for the proxy-header normalization that
+            # makes X-Forwarded-Proto trustworthy.
+            - name: JWT_PRIVATE_KEY_PATH
+              value: /etc/jwt-keys/jwt_private.pem
+            - name: JWT_PUBLIC_KEY_PATH
+              value: /etc/jwt-keys/jwt_public.pem
+
+          volumeMounts:
+            - name: jwt-keys
+              mountPath: /etc/jwt-keys
+              readOnly: true
 
           readinessProbe:
             httpGet:
@@ -97,6 +111,18 @@ spec:
             periodSeconds: 20
             timeoutSeconds: 5
             failureThreshold: 3
+
+      volumes:
+        - name: jwt-keys
+          secret:
+            secretName: smart-inventory-secret
+            items:
+              - key: jwt_private.pem
+                path: jwt_private.pem
+                mode: 0400
+              - key: jwt_public.pem
+                path: jwt_public.pem
+                mode: 0444
 
 ---
 apiVersion: v1

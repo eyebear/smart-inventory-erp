@@ -1,4 +1,4 @@
-import express from "express";
+import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 
@@ -9,6 +9,9 @@ import expiringProductsRoute from "./routes/expiringProducts";
 import analyticsRoute from "./routes/analytics";
 import legacySuppliersRoute from "./routes/legacySuppliers";
 import authRoute from "./routes/auth";
+import storesRoute from "./routes/stores";
+import auditLogRoute from "./routes/auditLog";
+import suppliersRoute from "./routes/suppliers";
 
 import { authenticateToken } from "./middleware/authMiddleware";
 import { requireRole } from "./middleware/roleMiddleware";
@@ -16,6 +19,30 @@ import { requireRole } from "./middleware/roleMiddleware";
 dotenv.config();
 
 const app = express();
+
+const trustProxy = process.env.TRUST_PROXY;
+if (trustProxy && trustProxy.length > 0) {
+  if (trustProxy === "true") {
+    app.set("trust proxy", true);
+  } else if (trustProxy === "false") {
+    app.set("trust proxy", false);
+  } else if (/^\d+$/.test(trustProxy)) {
+    app.set("trust proxy", Number(trustProxy));
+  } else {
+    app.set("trust proxy", trustProxy);
+  }
+} else {
+  app.set("trust proxy", false);
+}
+
+app.use((req: Request, _res: Response, next: NextFunction) => {
+  if (!req.app.get("trust proxy") && "x-forwarded-proto" in req.headers) {
+    delete req.headers["x-forwarded-proto"];
+    delete req.headers["x-forwarded-for"];
+    delete req.headers["x-forwarded-host"];
+  }
+  next();
+});
 
 app.use(cors());
 app.use(express.json());
@@ -69,5 +96,8 @@ app.use("/api/expiring-products", expiringProductsRoute);
 app.use("/api/analytics", analyticsRoute);
 app.use("/api/legacy-suppliers", legacySuppliersRoute);
 app.use("/api/auth", authRoute);
+app.use("/api/stores", storesRoute);
+app.use("/api/audit-log", auditLogRoute);
+app.use("/api/suppliers", suppliersRoute);
 
 export default app;

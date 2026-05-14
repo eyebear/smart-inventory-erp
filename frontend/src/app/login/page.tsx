@@ -1,108 +1,67 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-
-type LoginResponse = {
-    token: string;
-    user: {
-        id: number;
-        username: string;
-        role: string;
-        store_id: number | null;
-    };
-};
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/components/AuthProvider";
 
 export default function LoginPage() {
-    const [username, setUsername] = useState("admin");
-    const [password, setPassword] = useState("abc123456");
-    const [message, setMessage] = useState("");
-    const [loginResult, setLoginResult] = useState<LoginResponse | null>(null);
+  const router = useRouter();
+  const { login, status } = useAuth();
 
-    async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-        event.preventDefault();
+  const [username, setUsername] = useState("admin");
+  const [password, setPassword] = useState("abc123456");
+  const [message, setMessage] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-        setMessage("");
-        setLoginResult(null);
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
 
-        const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+    setMessage("");
+    setSubmitting(true);
 
-        try {
-            const response = await fetch(`${apiBaseUrl}/api/auth/login`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    username,
-                    password
-                })
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                setMessage(data.message || "Login failed");
-                return;
-            }
-
-            localStorage.setItem("authToken", data.token);
-            localStorage.setItem("authUser", JSON.stringify(data.user));
-
-            setLoginResult(data);
-            setMessage("Login successful");
-        } catch {
-            setMessage("Unable to connect to backend");
-        }
+    try {
+      await login(username, password);
+      router.replace("/");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Login failed");
+    } finally {
+      setSubmitting(false);
     }
+  }
 
-    function handleLogout() {
-        localStorage.removeItem("authToken");
-        localStorage.removeItem("authUser");
+  return (
+    <div className="login-page">
+      <h1 className="page-title">Smart Inventory ERP</h1>
 
-        setLoginResult(null);
-        setMessage("Logged out");
-    }
+      <div className="card">
+        <h2>Login</h2>
+        <form onSubmit={handleSubmit} className="login-form">
+          <label>
+            Username
+            <input
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              autoComplete="username"
+            />
+          </label>
 
-    return (
-        <div>
-            <h1 className="page-title">Login</h1>
+          <label>
+            Password
+            <input
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              autoComplete="current-password"
+            />
+          </label>
 
-            <div className="card">
-                <form onSubmit={handleSubmit} className="login-form">
-                    <label>
-                        Username
-                        <input
-                            value={username}
-                            onChange={(event) => setUsername(event.target.value)}
-                        />
-                    </label>
+          <button type="submit" disabled={submitting || status === "loading"}>
+            {submitting ? "Signing in…" : "Login"}
+          </button>
+        </form>
 
-                    <label>
-                        Password
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(event) => setPassword(event.target.value)}
-                        />
-                    </label>
-
-                    <button type="submit">Login</button>
-                </form>
-
-                {message && <p>{message}</p>}
-
-                {loginResult && (
-                    <div>
-                        <h3>User</h3>
-                        <p>Username: {loginResult.user.username}</p>
-                        <p>Role: {loginResult.user.role}</p>
-                        <p>Store ID: {loginResult.user.store_id ?? "All stores"}</p>
-                        <button type="button" onClick={handleLogout}>
-                            Logout
-                        </button>
-                    </div>
-                )}
-            </div>
-        </div>
-    );
+        {message && <p className="login-error">{message}</p>}
+      </div>
+    </div>
+  );
 }

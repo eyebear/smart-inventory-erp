@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import "./globals.css";
-import LanguageToggle from "@/components/LanguageToggle";
+import { AuthProvider } from "@/components/AuthProvider";
+import AppShell from "@/components/AppShell";
 
 export const metadata: Metadata = {
   title: "Smart Inventory ERP",
@@ -16,44 +16,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <div className="app-shell">
-          <aside className="sidebar">
-            <h2>Smart Inventory ERP</h2>
-            <LanguageToggle />
-            <nav>
-              <Link href="/login">
-                <span className="lang-en">Login</span>
-                <span className="lang-zh">登录</span>
-              </Link>
-              <Link href="/">
-                <span className="lang-en">Dashboard</span>
-                <span className="lang-zh">仪表盘</span>
-              </Link>
-
-              <Link href="/products">
-                <span className="lang-en">Products</span>
-                <span className="lang-zh">商品管理</span>
-              </Link>
-
-              <Link href="/inventory">
-                <span className="lang-en">Inventory</span>
-                <span className="lang-zh">库存管理</span>
-              </Link>
-
-              <Link href="/expiring-products">
-                <span className="lang-en">Expiring Products</span>
-                <span className="lang-zh">临期商品</span>
-              </Link>
-
-              <Link href="/waste-analytics">
-                <span className="lang-en">Waste Analytics</span>
-                <span className="lang-zh">损耗分析</span>
-              </Link>
-            </nav>
-          </aside>
-
-          <main className="content">{children}</main>
-        </div>
+        <AuthProvider>
+          <AppShell>{children}</AppShell>
+        </AuthProvider>
       </body>
     </html>
   );

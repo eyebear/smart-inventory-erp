@@ -1,3 +1,10 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import { useAuth } from "@/components/AuthProvider";
+import { authFetch } from "@/lib/api";
+
 type ExpiringProduct = {
   batch_id: number;
   batch_code: string;
@@ -14,27 +21,65 @@ type ExpiringProduct = {
   city: string;
 };
 
-async function getExpiringProducts(): Promise<ExpiringProduct[]> {
-const apiBaseUrl =
-  process.env.SERVER_API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL;
-
-  const response = await fetch(`${apiBaseUrl}/api/expiring-products?days=10`, {
-    cache: "no-store"
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch expiring products");
-  }
-
-  return response.json();
-}
-
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString("en-CA");
 }
 
-export default async function ExpiringProductsPage() {
-  const products = await getExpiringProducts();
+export default function ExpiringProductsPage() {
+  return (
+    <ProtectedRoute>
+      <ExpiringProductsContent />
+    </ProtectedRoute>
+  );
+}
+
+function ExpiringProductsContent() {
+  const { token, logout } = useAuth();
+  const [products, setProducts] = useState<ExpiringProduct[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      try {
+        const response = await authFetch("/api/expiring-products?days=10", {
+          token
+        });
+
+        if (response.status === 401) {
+          logout();
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch expiring products");
+        }
+
+        const data = (await response.json()) as ExpiringProduct[];
+        if (!cancelled) {
+          setProducts(data);
+          setError(null);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Unknown error");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, logout]);
 
   return (
     <div>
@@ -48,9 +93,12 @@ export default async function ExpiringProductsPage() {
       </div>
 
       <div className="card">
-        {products.length === 0 ? (
+        {loading && <p>Loading…</p>}
+        {error && <p>{error}</p>}
+        {!loading && !error && products.length === 0 && (
           <p>No products are expiring within the selected window.</p>
-        ) : (
+        )}
+        {!loading && !error && products.length > 0 && (
           <table>
             <thead>
               <tr>

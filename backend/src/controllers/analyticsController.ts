@@ -1,9 +1,34 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import { db } from "../config/database";
+import { AuthRequest } from "../middleware/authMiddleware";
 
-export const getWasteAnalytics = async (req: Request, res: Response) => {
+function resolveScope(req: AuthRequest):
+  | { ok: true; isAdmin: boolean; storeId: number | null }
+  | { ok: false; status: number; message: string } {
+  if (!req.user) {
+    return { ok: false, status: 401, message: "Authentication required" };
+  }
+
+  const isAdmin = req.user.role === "ADMIN";
+  if (!isAdmin && req.user.storeId == null) {
+    return {
+      ok: false,
+      status: 403,
+      message: "Store-scoped role missing store assignment"
+    };
+  }
+
+  return { ok: true, isAdmin, storeId: isAdmin ? null : req.user.storeId };
+}
+
+export const getWasteAnalytics = async (req: AuthRequest, res: Response) => {
+  const scope = resolveScope(req);
+  if (!scope.ok) {
+    return res.status(scope.status).json({ message: scope.message });
+  }
+
   try {
-    const [rows] = await db.query(`
+    const baseQuery = `
       SELECT
         wr.id AS waste_record_id,
         wr.quantity_wasted,
@@ -16,6 +41,7 @@ export const getWasteAnalytics = async (req: Request, res: Response) => {
         p.name_zh,
         p.category,
         s.name AS supplier_name,
+        st.id AS store_id,
         st.name AS store_name,
         st.city
       FROM waste_records wr
@@ -23,8 +49,14 @@ export const getWasteAnalytics = async (req: Request, res: Response) => {
       JOIN products p ON ib.product_id = p.id
       LEFT JOIN suppliers s ON p.supplier_id = s.id
       JOIN stores st ON ib.store_id = st.id
-      ORDER BY wr.waste_date DESC
-    `);
+    `;
+
+    const [rows] = scope.isAdmin
+      ? await db.query(`${baseQuery} ORDER BY wr.waste_date DESC`)
+      : await db.query(
+          `${baseQuery} WHERE ib.store_id = ? ORDER BY wr.waste_date DESC`,
+          [scope.storeId]
+        );
 
     res.json(rows);
   } catch (error) {
@@ -33,9 +65,14 @@ export const getWasteAnalytics = async (req: Request, res: Response) => {
   }
 };
 
-export const getWasteSummary = async (req: Request, res: Response) => {
+export const getWasteSummary = async (req: AuthRequest, res: Response) => {
+  const scope = resolveScope(req);
+  if (!scope.ok) {
+    return res.status(scope.status).json({ message: scope.message });
+  }
+
   try {
-    const [rows] = await db.query(`
+    const baseQuery = `
       SELECT
         st.name AS store_name,
         p.category,
@@ -45,9 +82,19 @@ export const getWasteSummary = async (req: Request, res: Response) => {
       JOIN inventory_batches ib ON wr.batch_id = ib.id
       JOIN products p ON ib.product_id = p.id
       JOIN stores st ON ib.store_id = st.id
+    `;
+
+    const groupAndOrder = `
       GROUP BY st.name, p.category
       ORDER BY total_estimated_loss DESC
-    `);
+    `;
+
+    const [rows] = scope.isAdmin
+      ? await db.query(`${baseQuery} ${groupAndOrder}`)
+      : await db.query(
+          `${baseQuery} WHERE ib.store_id = ? ${groupAndOrder}`,
+          [scope.storeId]
+        );
 
     res.json(rows);
   } catch (error) {

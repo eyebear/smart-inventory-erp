@@ -1,4 +1,19 @@
+"use client";
+
+import ProtectedRoute from "@/components/ProtectedRoute";
+import { useAuth } from "@/components/AuthProvider";
+
 export default function DashboardPage() {
+  return (
+    <ProtectedRoute>
+      <DashboardContent />
+    </ProtectedRoute>
+  );
+}
+
+function DashboardContent() {
+  const { user } = useAuth();
+
   return (
     <div>
       <h1 className="page-title">Dashboard</h1>
@@ -9,6 +24,11 @@ export default function DashboardPage() {
           This dashboard supports multi-store inventory tracking, expiry
           monitoring, supplier integration, and waste analytics.
         </p>
+        {user && (
+          <p>
+            Signed in as <strong>{user.username}</strong> ({user.role})
+          </p>
+        )}
       </div>
 
       <div className="card">
