@@ -1,0 +1,14 @@
+guid: REPLACE_WITH_CAMPAIGN_PACING_MODEL_GUID
+model:
+  name: Campaign Pacing
+  description: Campaign budget utilization and pacing variance.
+  model_tables:
+  - name: Campaign Pacing Mart
+    id: campaign_pacing
+  formulas:
+  - id: budget_utilization
+    name: Budget Utilization
+    expr: "sum [Actual Spend] / nullif ( sum [Planned Budget], 0 )"
+  - id: pacing_variance
+    name: Pacing Variance
+    expr: "[Budget Utilization] - [Expected Elapsed Budget Utilization]"

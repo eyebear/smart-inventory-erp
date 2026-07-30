@@ -1,0 +1,14 @@
+guid: REPLACE_WITH_PROMOTED_PRODUCT_RISK_MODEL_GUID
+model:
+  name: Promoted Product Risk
+  description: Connects retail-media performance to inventory and expiry risk.
+  model_tables:
+  - name: Promoted Product Risk Mart
+    id: promoted_product_risk
+  formulas:
+  - id: stock_availability
+    name: Stock Availability
+    expr: "sum ( if ( [Quantity On Hand] > 0 ) then 1 else 0 ) / nullif ( count [Product ID], 0 )"
+  - id: expiring_inventory_value
+    name: Expiring Inventory Value
+    expr: "sum [Expiring Inventory Value 7D]"

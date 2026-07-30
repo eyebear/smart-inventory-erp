@@ -1,0 +1,54 @@
+services:
+  analytics-airflow:
+    build:
+      context: .
+      dockerfile: analytics/Dockerfile
+    container_name: smart-inventory-analytics-airflow
+    restart: unless-stopped
+    command: standalone
+    env_file:
+      - path: .env.analytics
+        required: false
+    environment:
+      AIRFLOW_HOME: /opt/airflow
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/project/analytics/airflow/dags
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DAGBAG_IMPORT_TIMEOUT: "60"
+      AIRFLOW__LOGGING__LOGGING_LEVEL: INFO
+      AIRFLOW__API__AUTH_BACKENDS: airflow.api.auth.backend.basic_auth
+      _AIRFLOW_WWW_USER_USERNAME: ${AIRFLOW_ADMIN_USERNAME:-admin}
+      _AIRFLOW_WWW_USER_PASSWORD: ${AIRFLOW_ADMIN_PASSWORD:-admin}
+      PYTHONPATH: /opt/project
+      JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./:/opt/project
+      - smart_inventory_airflow_home:/opt/airflow
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail http://localhost:8080/api/v2/monitor/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+
+  analytics-runner:
+    build:
+      context: .
+      dockerfile: analytics/Dockerfile
+    container_name: smart-inventory-analytics-runner
+    command: ["bash", "-lc", "sleep infinity"]
+    env_file:
+      - path: .env.analytics
+        required: false
+    environment:
+      PYTHONPATH: /opt/project
+      JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
+    volumes:
+      - ./:/opt/project
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  smart_inventory_airflow_home:

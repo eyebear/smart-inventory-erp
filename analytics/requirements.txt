@@ -1,0 +1,12 @@
+# Airflow itself is supplied by the official apache/airflow image.
+apache-airflow-providers-mysql>=6,<8
+apache-airflow-providers-snowflake>=6,<8
+mysql-connector-python>=9,<10
+snowflake-connector-python[pandas]>=3,<5
+pyspark>=4.0,<4.2
+pyarrow>=18,<22
+pandas>=2.1.2,<2.2
+faker>=30,<40
+PyYAML>=6,<7
+requests>=2.32,<3
+pytest>=8,<10

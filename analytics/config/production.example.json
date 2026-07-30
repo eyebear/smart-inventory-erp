@@ -1,0 +1,24 @@
+{
+  "environment": "production",
+  "mysql": {
+    "host": "replace-with-managed-mysql-host",
+    "port": 3306,
+    "database": "smart_inventory_erp"
+  },
+  "paths": {
+    "generated": "/data/generated",
+    "raw": "/data/raw",
+    "quarantine": "/data/quarantine",
+    "curated": "/data/curated",
+    "quality": "/data/quality"
+  },
+  "quality": {
+    "freshness_hours": 30,
+    "row_count_change_percent": 25,
+    "low_stock_units": 20,
+    "expiry_risk_days": 7,
+    "low_roas": 1.5,
+    "high_cpa": 50,
+    "pacing_variance_percent": 20
+  }
+}

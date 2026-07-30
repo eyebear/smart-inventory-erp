@@ -94,3 +94,40 @@ jobs:
 
       - name: Check PHP syntax
         run: find . -name "*.php" -print0 | xargs -0 -n1 php -l
+
+  analytics:
+    name: Analytics CI
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install analytics test dependencies
+        run: pip install pytest pyspark==4.1.2 mysql-connector-python PyYAML
+
+      - name: Compile analytics Python
+        run: python -m compileall analytics
+
+      - name: Run data generator tests
+        run: pytest -q analytics/data_generator/test_generate_retail_media_data.py
+
+      - name: Run PySpark transformation tests
+        run: pytest -q analytics/pyspark/tests
+
+      - name: Validate ThoughtSpot TML templates
+        run: pytest -q analytics/thoughtspot/test_validate_tml.py
+
+      - name: Validate watchdog shell syntax
+        run: bash -n scripts/*.sh

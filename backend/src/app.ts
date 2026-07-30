@@ -12,6 +12,7 @@ import authRoute from "./routes/auth";
 import storesRoute from "./routes/stores";
 import auditLogRoute from "./routes/auditLog";
 import suppliersRoute from "./routes/suppliers";
+import retailMediaRoute from "./routes/retailMedia";
 
 import { authenticateToken } from "./middleware/authMiddleware";
 import { requireRole } from "./middleware/roleMiddleware";
@@ -99,5 +100,6 @@ app.use("/api/auth", authRoute);
 app.use("/api/stores", storesRoute);
 app.use("/api/audit-log", auditLogRoute);
 app.use("/api/suppliers", suppliersRoute);
+app.use("/api/retail-media", retailMediaRoute);
 
 export default app;

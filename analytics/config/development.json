@@ -1,0 +1,24 @@
+{
+  "environment": "development",
+  "mysql": {
+    "host": "host.docker.internal",
+    "port": 3307,
+    "database": "smart_inventory_erp"
+  },
+  "paths": {
+    "generated": "/opt/project/analytics/data/generated",
+    "raw": "/opt/project/analytics/data/raw",
+    "quarantine": "/opt/project/analytics/data/quarantine",
+    "curated": "/opt/project/analytics/data/curated",
+    "quality": "/opt/project/analytics/data/quality"
+  },
+  "quality": {
+    "freshness_hours": 36,
+    "row_count_change_percent": 50,
+    "low_stock_units": 20,
+    "expiry_risk_days": 7,
+    "low_roas": 1.5,
+    "high_cpa": 50,
+    "pacing_variance_percent": 20
+  }
+}

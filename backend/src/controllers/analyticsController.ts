@@ -102,3 +102,23 @@ export const getWasteSummary = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ message: "Failed to fetch waste summary" });
   }
 };
+
+export const getAnalyticsAlerts = async (req: AuthRequest, res: Response) => {
+  const scope = resolveScope(req);
+  if (!scope.ok) {
+    return res.status(scope.status).json({ message: scope.message });
+  }
+  try {
+    const [rows] = await db.query(`
+      SELECT id, alert_key, alert_class, alert_type, severity, status, message,
+             source_run_id, details, opened_at, last_seen_at, resolved_at
+      FROM analytics_alerts
+      ORDER BY FIELD(status, 'OPEN', 'RESOLVED'), last_seen_at DESC
+      LIMIT 500
+    `);
+    res.json(rows);
+  } catch (error) {
+    console.error("Failed to fetch analytics alerts:", error);
+    res.status(500).json({ message: "Failed to fetch analytics alerts" });
+  }
+};

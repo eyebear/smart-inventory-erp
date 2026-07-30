@@ -1,0 +1,25 @@
+guid: REPLACE_WITH_EXECUTIVE_LIVEBOARD_GUID
+liveboard:
+  name: Smart Inventory Executive Overview
+  description: Retail operations, campaign performance, promoted-product risk, and pipeline reliability.
+  visualizations:
+  - id: campaign_performance_summary
+    answer:
+      name: Campaign Performance Summary
+      model:
+        name: Campaign Performance
+  - id: promoted_product_risk
+    answer:
+      name: Promoted Product Risk
+      model:
+        name: Promoted Product Risk
+  - id: inventory_health
+    answer:
+      name: Inventory Health
+      model:
+        name: Inventory Health
+  - id: pipeline_health
+    answer:
+      name: Pipeline Health
+      model:
+        name: Pipeline Health

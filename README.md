@@ -59,6 +59,16 @@ This system helps monitor inventory, detect expiring products, analyze waste, an
 - NGINX Ingress
 - Azure deployment planning
 
+### Analytics and Data Platform
+
+- Python and PySpark
+- Apache Airflow DAG orchestration
+- Snowflake raw, staging, curated, and mart layers
+- ThoughtSpot Modeling Language (TML)
+- Data-quality validation and invalid-row quarantine
+- Pipeline health, freshness, reconciliation, and alert history
+- Cron-based Airflow watchdog and controlled recovery trigger
+
 ---
 
 ## Main Features
@@ -76,6 +86,15 @@ This system helps monitor inventory, detect expiring products, analyze waste, an
 - Docker Compose local deployment
 - Local Kubernetes deployment
 - Azure Kubernetes Service deployment planning
+- Retail-media advertisers, campaigns, audiences, budgets, events, and conversions
+- Campaign-to-product and campaign-to-inventory risk analysis
+- Synthetic campaign-event generation at multi-million-row scale
+- PySpark transformations with explicit schemas, deduplication, quarantine, and partitioned Parquet output
+- Snowflake dimensional warehouse and idempotent MERGE-based reporting layers
+- Airflow retries, timeouts, backfills, freshness checks, reconciliation, and failure callbacks
+- Persistent technical and business alerts
+- Version-controlled ThoughtSpot TML semantic models and Liveboard metadata
+- Cron watchdog that checks Airflow health without becoming a competing scheduler
 
 ---
 
@@ -1410,6 +1429,441 @@ The current verified deployment targets are:
 
 ---
 
+## Analytics and Retail-Media Extension
+
+The `analytics/` directory adds an isolated data-engineering and reporting layer to the existing ERP application. It does not replace or rewrite the Next.js frontend, Express backend, MySQL operational database, legacy PHP service, Docker Compose stack, or Kubernetes deployment.
+
+The extension connects retail-media campaign performance with product and inventory availability. This supports questions such as:
+
+- Is a high-performing campaign promoting a product that is low in stock?
+- Which campaigns are overspending or underspending against plan?
+- Which stores, products, audiences, and channels are producing the strongest results?
+- Are campaign and inventory datasets complete, fresh, and internally consistent?
+- Which technical or business exceptions require immediate action?
+
+### Analytics architecture
+
+```text
+MySQL operational ERP and retail-media tables
+        ↓
+Airflow orchestration
+        ↓
+Python extraction and synthetic event ingestion
+        ↓
+PySpark validation, quarantine, transformation, and Parquet output
+        ↓
+Snowflake RAW → STAGING → CURATED → MARTS
+        ↓
+ThoughtSpot TML models and executive reporting
+        ↓
+Technical alerts, business alerts, and cron watchdog
+```
+
+Detailed design documents:
+
+- `docs/analytics-architecture.md`
+- `docs/data-lineage.md`
+- `docs/kpi-dictionary.md`
+- `docs/pipeline-runbook.md`
+- `docs/cron-watchdog.md`
+
+### Retail-media operational module
+
+The MySQL operational model adds:
+
+- `advertisers`
+- `campaigns`
+- `campaign_products`
+- `audience_segments`
+- `campaign_daily_events`
+- `campaign_budgets`
+- `campaign_conversions`
+- `analytics_alerts`
+
+The backend exposes authenticated retail-media routes for campaign operations and reporting while preserving the existing inventory, waste, authentication, audit, and supplier APIs.
+
+### Analytics directory structure
+
+```text
+analytics/
+├── airflow/
+│   ├── dags/
+│   └── tests/
+├── config/
+├── data/
+│   ├── generated/
+│   ├── raw/
+│   ├── curated/
+│   ├── quarantine/
+│   └── quality/
+├── data_generator/
+├── monitoring/
+├── pyspark/
+│   ├── jobs/
+│   └── tests/
+├── snowflake/
+│   ├── ddl/
+│   ├── raw/
+│   ├── staging/
+│   ├── curated/
+│   ├── marts/
+│   └── tests/
+└── thoughtspot/
+    └── tml/
+```
+
+### Environment configuration
+
+Copy the analytics environment template and enter the required credentials:
+
+```bash
+cp .env.analytics.example .env.analytics
+```
+
+Important variables include:
+
+- `SMART_INVENTORY_ENV`
+- `ANALYTICS_CONFIG`
+- `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`
+- `SNOWFLAKE_ACCOUNT`, `SNOWFLAKE_USER`, `SNOWFLAKE_PASSWORD`
+- `SNOWFLAKE_WAREHOUSE`, `SNOWFLAKE_DATABASE`, `SNOWFLAKE_ROLE`
+- `ALERT_WEBHOOK_URL`
+- `THOUGHTSPOT_HOST`, `THOUGHTSPOT_BEARER_TOKEN`, `THOUGHTSPOT_CONNECTION_GUID`
+- `AIRFLOW_BASE_URL`, `AIRFLOW_USERNAME`, `AIRFLOW_PASSWORD`, `AIRFLOW_DAG_ID`
+- `AIRFLOW_EXPECTED_RUN_HOURS`, `AIRFLOW_BACKUP_TRIGGER_ENABLED`, `CRON_INTERVAL`
+
+Do not commit `.env.analytics` or production credentials.
+
+### Start the ERP and analytics environments
+
+Start the existing application stack first:
+
+```bash
+docker compose up -d --build
+```
+
+Start the separate analytics services:
+
+```bash
+docker compose \
+  -f docker-compose.analytics.yml \
+  --env-file .env.analytics \
+  up -d --build
+```
+
+Open Airflow at:
+
+```text
+http://localhost:8080
+```
+
+The local Airflow deployment uses standalone mode for development. A production deployment should use a supported external metadata database, production executor, remote logging, secret management, and managed infrastructure.
+
+### Generate realistic campaign data
+
+The generator creates products, stores, advertisers, audiences, campaigns, budgets, conversions, and multi-million-row daily event data. It can deliberately inject duplicate events, missing campaign IDs, invalid metric relationships, negative spend, invalid dates, late-arriving records, and promoted-product inventory risk.
+
+Generate the default three million event rows:
+
+```bash
+docker compose \
+  -f docker-compose.analytics.yml \
+  --env-file .env.analytics \
+  exec analytics-runner \
+  python analytics/data_generator/generate_retail_media_data.py \
+  --rows 3000000
+```
+
+Run a smaller local smoke test:
+
+```bash
+docker compose \
+  -f docker-compose.analytics.yml \
+  --env-file .env.analytics \
+  exec analytics-runner \
+  python analytics/data_generator/generate_retail_media_data.py \
+  --rows 5000 \
+  --chunk-size 1000
+```
+
+### Run the PySpark pipeline manually
+
+The PySpark jobs use explicit schemas and produce cleaned, quarantined, quality, and curated Parquet datasets partitioned by business date.
+
+```bash
+docker compose \
+  -f docker-compose.analytics.yml \
+  --env-file .env.analytics \
+  exec analytics-runner \
+  python -m analytics.pyspark.jobs.run_all \
+  --business-date 2026-07-30
+```
+
+The pipeline produces:
+
+- `campaign_daily_performance`
+- `inventory_daily_snapshot`
+- `waste_daily_summary`
+- `promoted_product_inventory_risk`
+- `pipeline_data_quality_results`
+
+Invalid campaign records are written to the quarantine area instead of being silently discarded.
+
+### Snowflake warehouse
+
+The Snowflake implementation creates:
+
+- `RAW` source tables
+- `STAGING` normalized tables
+- `CURATED` dimensions and facts
+- `MARTS` decision-oriented reporting models
+- reconciliation and freshness checks
+
+Apply the SQL layers manually when required:
+
+```bash
+docker compose -f docker-compose.analytics.yml --env-file .env.analytics exec analytics-runner \
+  python -m analytics.snowflake.run_sql ddl
+docker compose -f docker-compose.analytics.yml --env-file .env.analytics exec analytics-runner \
+  python -m analytics.snowflake.run_sql raw
+docker compose -f docker-compose.analytics.yml --env-file .env.analytics exec analytics-runner \
+  python -m analytics.snowflake.run_sql staging
+docker compose -f docker-compose.analytics.yml --env-file .env.analytics exec analytics-runner \
+  python -m analytics.snowflake.run_sql curated
+docker compose -f docker-compose.analytics.yml --env-file .env.analytics exec analytics-runner \
+  python -m analytics.snowflake.run_sql marts
+```
+
+Load Parquet data for a business date:
+
+```bash
+docker compose \
+  -f docker-compose.analytics.yml \
+  --env-file .env.analytics \
+  exec analytics-runner \
+  python -m analytics.snowflake.load_parquet \
+  --business-date 2026-07-30
+```
+
+Snowflake transformations use business keys and `MERGE` logic so a business date can be rerun without creating duplicate curated records.
+
+### Airflow daily pipeline
+
+The DAG is defined at:
+
+```text
+analytics/airflow/dags/smart_inventory_daily_analytics.py
+```
+
+DAG ID:
+
+```text
+smart_inventory_daily_analytics
+```
+
+Normal schedule:
+
+```text
+0 4 * * * UTC
+```
+
+The task chain is:
+
+```text
+check_mysql
+    ↓
+extract_operational_tables
+    ↓
+generate_or_ingest_campaign_events
+    ↓
+run_pyspark_transformations
+    ↓
+run_preload_quality_checks
+    ↓
+load_snowflake_raw
+    ↓
+build_staging_tables
+    ↓
+build_dimensions
+    ↓
+build_facts
+    ↓
+build_marts
+    ↓
+run_reconciliation_checks
+    ↓
+validate_data_freshness
+    ↓
+publish_pipeline_status
+    ↓
+send_success_or_failure_alert
+```
+
+The DAG supports retries, retry delays, execution timeouts, failure callbacks, idempotent business-date processing, catch-up runs, date-based backfills, freshness checks, and reconciliation.
+
+Trigger a manual run from the Airflow UI, or use the shared API helper from a shell:
+
+```bash
+set -a
+source .env.analytics
+set +a
+source scripts/airflow-api.sh
+
+run_id="manual__readme__$(date -u +%Y%m%dT%H%M%SZ)"
+logical_date="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+payload="$(jq -n \
+  --arg run_id "$run_id" \
+  --arg logical_date "$logical_date" \
+  '{dag_run_id:$run_id,logical_date:$logical_date,conf:{triggered_by:"readme"}}')"
+
+airflow_api POST \
+  "/api/v2/dags/smart_inventory_daily_analytics/dagRuns" \
+  "$payload"
+```
+
+### Alerting and monitoring
+
+Technical alerts include:
+
+- Airflow task failure
+- Missing daily partition
+- Stale Snowflake data
+- Unexpected row-count changes
+- PySpark processing failure
+- Snowflake load failure
+- TML deployment failure
+
+Business alerts include:
+
+- Campaign pacing above or below threshold
+- Low ROAS
+- High CPA
+- Promoted SKU with low stock
+- Promoted SKU approaching expiry
+- Sudden waste-rate increase
+
+Alerts are persisted in `analytics_alerts` with a stable alert key so duplicate active alerts are suppressed and recovery can be tracked.
+
+### ThoughtSpot TML
+
+Version-controlled TML assets are stored in:
+
+```text
+analytics/thoughtspot/tml/
+```
+
+Included metadata:
+
+- `inventory_model.table.tml`
+- `campaign_performance.model.tml`
+- `campaign_pacing.model.tml`
+- `promoted_product_risk.model.tml`
+- `pipeline_health.model.tml`
+- `executive_overview.liveboard.tml`
+
+Validate all TML locally:
+
+```bash
+docker compose \
+  -f docker-compose.analytics.yml \
+  --env-file .env.analytics \
+  exec analytics-runner \
+  python -m analytics.thoughtspot.validate_tml
+```
+
+Validate against ThoughtSpot without importing:
+
+```bash
+docker compose \
+  -f docker-compose.analytics.yml \
+  --env-file .env.analytics \
+  exec analytics-runner \
+  python -m analytics.thoughtspot.deploy_tml \
+  --validate-only
+```
+
+Deploy after mart schemas are stable:
+
+```bash
+docker compose \
+  -f docker-compose.analytics.yml \
+  --env-file .env.analytics \
+  exec analytics-runner \
+  python -m analytics.thoughtspot.deploy_tml
+```
+
+Governed measures include CPM, CTR, CPC, CPA, ROAS, budget utilization, pacing variance, inventory turnover, waste rate, expiring inventory value, and stock availability.
+
+### Cron watchdog
+
+Airflow remains the only normal scheduler. Cron checks Airflow health and verifies that the expected DAG run exists. It does not independently launch the daily pipeline on every interval.
+
+Install the watchdog:
+
+```bash
+./scripts/install-cron-watchdog.sh
+```
+
+Run a health check manually:
+
+```bash
+./scripts/check-airflow-health.sh
+```
+
+Trigger one controlled recovery request only when the expected run is missing:
+
+```bash
+./scripts/trigger-airflow-backup.sh
+```
+
+The scripts use a lock and recheck active and recent runs before triggering recovery, which reduces the risk of duplicate execution.
+
+### Validation and tests
+
+Run analytics Python tests:
+
+```bash
+docker compose \
+  -f docker-compose.analytics.yml \
+  --env-file .env.analytics \
+  exec analytics-runner \
+  pytest analytics/data_generator analytics/pyspark/tests analytics/airflow/tests
+```
+
+Validate TML:
+
+```bash
+docker compose \
+  -f docker-compose.analytics.yml \
+  --env-file .env.analytics \
+  exec analytics-runner \
+  pytest analytics/thoughtspot/test_validate_tml.py
+```
+
+Validate shell scripts:
+
+```bash
+bash -n scripts/airflow-api.sh
+bash -n scripts/check-airflow-health.sh
+bash -n scripts/trigger-airflow-backup.sh
+bash -n scripts/install-cron-watchdog.sh
+```
+
+The existing frontend, backend, Docker, and Kubernetes validation commands remain unchanged.
+
+### Operating model
+
+- Airflow is the primary scheduler.
+- PySpark performs scalable validation and transformation.
+- Snowflake stores governed analytical layers.
+- ThoughtSpot TML versions semantic models and Liveboard metadata.
+- Alert history is persisted for auditability.
+- Cron acts only as an Airflow watchdog and controlled recovery mechanism.
+- Reruns use business-date partitions and idempotent Snowflake logic.
+- Existing ERP application services remain independently deployable.
+
+---
+
 ## Project Highlights for Recruiters
 
 - Full-stack ERP-style system
@@ -1423,6 +1877,13 @@ The current verified deployment targets are:
 - GitHub Actions CI with Docker build validation
 - Azure deployment planning for ACR, AKS, and Azure MySQL
 - Bilingual English and Chinese UI support
+- Retail-media campaign and audience data linked to product and inventory availability
+- Multi-million-row synthetic event generation with deliberate data-quality defects
+- PySpark validation, quarantine, partitioned Parquet, and curated datasets
+- Airflow DAG orchestration with retries, backfills, callbacks, reconciliation, and freshness checks
+- Snowflake dimensional modelling with idempotent reporting-layer refreshes
+- ThoughtSpot TML semantic models and governed KPI definitions
+- Persistent technical and business alerts with cron-based Airflow health monitoring
 
 ---
 
@@ -1438,6 +1899,13 @@ See:
 - docs/azure-container-registry-plan.md
 - docs/azure-kubernetes-service-deployment-notes.md
 - docs/azure-mysql-migration-notes.md
+- docs/analytics-architecture.md
+- docs/data-lineage.md
+- docs/kpi-dictionary.md
+- docs/pipeline-runbook.md
+- docs/cron-watchdog.md
+- analytics/README.md
+- analytics/thoughtspot/README.md
 
 ---
 
@@ -1456,3 +1924,9 @@ This project demonstrates:
 - Kubernetes deployment preparation
 - CI/CD workflow design
 - Azure cloud deployment planning
+- Retail-media operational modelling and campaign analytics
+- Distributed PySpark data processing and quality quarantine
+- Apache Airflow orchestration and controlled backfills
+- Snowflake dimensional warehouse design and idempotent loading
+- ThoughtSpot TML semantic modelling
+- Pipeline reliability, alert history, and cron watchdog operations

@@ -1,0 +1,23 @@
+guid: REPLACE_WITH_CAMPAIGN_PERFORMANCE_MODEL_GUID
+model:
+  name: Campaign Performance
+  description: Governed retail-media performance metrics from Snowflake MART_CAMPAIGN_PERFORMANCE.
+  model_tables:
+  - name: Campaign Performance Mart
+    id: campaign_performance
+  formulas:
+  - id: ctr
+    name: CTR
+    expr: "sum [Clicks] / nullif ( sum [Impressions], 0 )"
+  - id: cpm
+    name: CPM
+    expr: "sum [Spend] * 1000 / nullif ( sum [Impressions], 0 )"
+  - id: cpc
+    name: CPC
+    expr: "sum [Spend] / nullif ( sum [Clicks], 0 )"
+  - id: cpa
+    name: CPA
+    expr: "sum [Spend] / nullif ( sum [Conversions], 0 )"
+  - id: roas
+    name: ROAS
+    expr: "sum [Attributed Revenue] / nullif ( sum [Spend], 0 )"

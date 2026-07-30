@@ -45,3 +45,45 @@ VALUES
   ('admin', '$2b$10$pSIA9IeGWGWCr6EKYRQZsOsMj.WEYSfX9mEpEnYm0cNJFIDDlly2u', 'ADMIN', NULL, 1),
   ('richmond_manager', '$2b$10$pSIA9IeGWGWCr6EKYRQZsOsMj.WEYSfX9mEpEnYm0cNJFIDDlly2u', 'STORE_MANAGER', 1, 1),
   ('burnaby_manager', '$2b$10$pSIA9IeGWGWCr6EKYRQZsOsMj.WEYSfX9mEpEnYm0cNJFIDDlly2u', 'STORE_MANAGER', 2, 1);
+INSERT INTO advertisers (name, industry, contact_email)
+VALUES
+  ('Pacific Fresh Retail Media', 'Grocery', 'media@pacificfresh.example'),
+  ('East Asia Brand Studio', 'Consumer Packaged Goods', 'ads@eastasia.example');
+
+INSERT INTO audience_segments (name, description)
+VALUES
+  ('Fresh Food Buyers', 'Customers with recent fresh-food purchases'),
+  ('Value Seekers', 'Customers responsive to discounts and promotions'),
+  ('Premium Seafood Shoppers', 'Customers with premium seafood purchase history');
+
+INSERT INTO campaigns (
+  campaign_code, advertiser_id, store_id, region, channel,
+  audience_segment_id, start_date, end_date, planned_budget,
+  daily_budget, objective, status
+)
+VALUES
+  ('CMP-RICH-TOFU-2026', 1, 1, 'Metro Vancouver', 'DISPLAY', 1,
+   '2026-04-01', '2026-05-31', 10000.00, 175.00, 'CONVERSION', 'ACTIVE'),
+  ('CMP-BURN-KIMCHI-2026', 2, 2, 'Metro Vancouver', 'VIDEO', 2,
+   '2026-04-15', '2026-06-15', 15000.00, 250.00, 'ROAS', 'ACTIVE');
+
+INSERT INTO campaign_products (campaign_id, product_id, promoted_sku)
+VALUES
+  (1, 1, 'TOFU-001'),
+  (2, 4, 'KIM-001');
+
+INSERT INTO campaign_budgets (campaign_id, budget_date, planned_daily_budget)
+VALUES
+  (1, '2026-04-24', 175.00),
+  (2, '2026-04-24', 250.00);
+
+INSERT INTO campaign_daily_events (
+  event_id, event_date, campaign_id, product_id, store_id,
+  audience_segment_id, region, channel, device, impressions,
+  clicks, conversions, spend, attributed_revenue
+)
+VALUES
+  ('evt-seed-001', '2026-04-24', 1, 1, 1, 1, 'Metro Vancouver',
+   'DISPLAY', 'MOBILE', 15000, 450, 38, 162.50, 650.00),
+  ('evt-seed-002', '2026-04-24', 2, 4, 2, 2, 'Metro Vancouver',
+   'VIDEO', 'CONNECTED_TV', 22000, 330, 25, 242.00, 710.00);

@@ -1,0 +1,11 @@
+guid: REPLACE_WITH_PIPELINE_HEALTH_MODEL_GUID
+model:
+  name: Pipeline Health
+  description: Pipeline status, failed checks, warning checks, and freshness measures.
+  model_tables:
+  - name: Pipeline Health Mart
+    id: pipeline_health
+  formulas:
+  - id: pipeline_success_rate
+    name: Pipeline Success Rate
+    expr: "sum ( if ( [Status] = 'SUCCESS' ) then 1 else 0 ) / nullif ( count [Run ID], 0 )"

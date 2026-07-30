@@ -28,3 +28,16 @@ out/
 
 # PHP vendor files
 vendor/
+# Analytics runtime data and credentials
+.env.analytics
+analytics/data/generated/*
+analytics/data/raw/*
+analytics/data/quarantine/*
+analytics/data/curated/*
+analytics/data/quality/*
+!analytics/data/**/.gitkeep
+analytics/**/__pycache__/
+.pytest_cache/
+*.parquet
+spark-warehouse/
+derby.log

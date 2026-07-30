@@ -1,0 +1,41 @@
+guid: REPLACE_WITH_INVENTORY_TABLE_GUID
+table:
+  name: Inventory Health
+  db: SMART_INVENTORY_ANALYTICS
+  schema: MARTS
+  db_table: MART_INVENTORY_HEALTH
+  connection:
+    name: REPLACE_WITH_SNOWFLAKE_CONNECTION_NAME
+  columns:
+  - name: Snapshot Date
+    db_column_name: SNAPSHOT_DATE
+    properties:
+      column_type: ATTRIBUTE
+  - name: Store ID
+    db_column_name: STORE_ID
+    properties:
+      column_type: ATTRIBUTE
+  - name: Product ID
+    db_column_name: PRODUCT_ID
+    properties:
+      column_type: ATTRIBUTE
+  - name: Quantity On Hand
+    db_column_name: QUANTITY_ON_HAND
+    properties:
+      column_type: MEASURE
+      aggregation: SUM
+  - name: Inventory Value
+    db_column_name: INVENTORY_VALUE
+    properties:
+      column_type: MEASURE
+      aggregation: SUM
+  - name: Expiring Units 7D
+    db_column_name: EXPIRING_UNITS_7D
+    properties:
+      column_type: MEASURE
+      aggregation: SUM
+  - name: Expiring Inventory Value 7D
+    db_column_name: EXPIRING_INVENTORY_VALUE_7D
+    properties:
+      column_type: MEASURE
+      aggregation: SUM
